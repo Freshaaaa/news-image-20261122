@@ -770,9 +770,9 @@ def draw_turkiye(img, draw, x0, y0, w, h):
 
 def draw_libya(img, draw, x0, y0, w, h):
     """Libya / Mediterranean SCENE (130px box): the sea fills the top
-    two-thirds, a BIG burning warship (120px hull) sits low in the sea
-    with a two-tier orange fire and five smoke puffs billowing up and
-    to the right, waves under the hull, a smaller ship in the distance,
+    two-thirds, a BIG burning warship (150px hull) sits low in the sea
+    with layered flames and five smoke puffs billowing up and to the
+    right, waves under the hull, a smaller ship in the distance,
     a burning port facility on the coast near Benghazi, and a thick red
     SEA DRONE arrow. At 300px the first thing seen is the burning ship.
     Everything stays inside the box (x0, y0, w, h)."""
@@ -825,6 +825,11 @@ def draw_libya(img, draw, x0, y0, w, h):
     for dx, dy in [(-9, -25), (0, -27), (9, -24)]:
         draw.line([(fx, fy - 6), (fx + dx, fy + dy)], fill=RED, width=3)
     draw.rectangle([fx - 12, fy - 5, fx + 12, fy + 3], fill=(60, 60, 60))
+    # v8: a pale wash behind the main ship so the black hull lifts off
+    # the sea (drawn BEFORE the small ship so the small ship stays crisp)
+    _watercolor(img, [(x0 + 40, y0 + 6), (x0 + 235, y0 + 6),
+                      (x0 + 235, y0 + 72), (x0 + 40, y0 + 72)],
+                (205, 222, 234), alpha=30, seed=216)
     # second ship, small, in the distance (lower left of the sea)
     sx2, sy2 = x0 + 0.13 * w, y0 + 0.24 * h
     draw.polygon([(sx2 - 13, sy2), (sx2 + 13, sy2), (sx2 + 9, sy2 + 5),
@@ -833,84 +838,90 @@ def draw_libya(img, draw, x0, y0, w, h):
     draw.ellipse([sx2 - 2, sy2 - 12, sx2 + 2, sy2 - 7], fill=(150, 145, 135))
     draw.line([(sx2 - 15, sy2 + 7), (sx2 + 15, sy2 + 7)], fill=BLUE2, width=1)
     # BIG burning warship, low in the sea (waterline just above the coast)
-    # v7: REDRAWN as a real warship — pointed bow to the right, slanted
-    # transom stern, stepped bridge tower with lit windows, bow gun
-    # turret, slanted funnel, radar mast + antenna, portholes along the
-    # hull, and LAYERED flames (red -> orange -> yellow tongues) instead
-    # of one big yellow blob. Same footprint as v6: hull ~120px wide,
-    # fire + smoke still above the ship, arrow still points at her.
+    # v8: ZOOMED IN — hull 120px -> 150px wide and 16px -> 20px tall,
+    # fewer but BIGGER details (6 large portholes, 2 big lit bridge
+    # windows, chunky gun turret, thick mast), thicker white waterline
+    # + wider grey stripe, lighter superstructure, pale wash behind the
+    # ship — so the ship reads as a warship even at 300px. Same centre:
+    # sx, sy unchanged; footprint grows left/right, not up/down.
     sx, sy = x0 + 0.40 * w, y0 + 0.52 * h
-    # smoke: 5 puffs billowing up and to the right (wind) — v7: each
-    # puff jittered a couple px (seeded) so the column reads organic,
-    # darkest at the base, lightest at the top, pale highlight on top
+    # smoke: 5 puffs billowing up and to the right (wind) — v8: slightly
+    # bigger puffs to match the bigger ship, seeded jitter as in v7
     _rng = random.Random(205)
     for dx, dy, rw, rh, col in [
-            (-20, -62, 18, 16, (98, 93, 83)), (-6, -64, 18, 16, (118, 113, 103)),
-            (6, -66, 18, 16, (138, 133, 123)), (16, -64, 18, 14, (158, 153, 143)),
-            (26, -60, 16, 12, (172, 167, 157))]:
+            (-24, -64, 20, 18, (98, 93, 83)), (-8, -66, 20, 18, (118, 113, 103)),
+            (8, -66, 20, 18, (138, 133, 123)), (20, -62, 18, 16, (158, 153, 143)),
+            (32, -58, 18, 14, (172, 167, 157))]:
         jx, jy = _rng.uniform(-2, 2), _rng.uniform(-2, 2)
         draw.ellipse([sx + dx + jx, sy + dy + jy,
                       sx + dx + rw + jx, sy + dy + rh + jy], fill=col)
-    draw.ellipse([sx + 28, sy - 58, sx + 38, sy - 52], fill=(205, 200, 190))
-    # warm glow behind the flames (smaller than v6's blob — the layered
-    # flames now do the work)
-    draw.ellipse([sx - 34, sy - 44, sx + 34, sy - 14], fill=(250, 195, 95))
-    # hull: pointed bow right, slanted transom stern, ~120px wide.
-    # v6's vertices were jittered 1.5px (seeded) so the edge is rough,
-    # not ruler-straight — kept here
-    hull = [(sx - 58, sy - 6), (sx + 38, sy - 6), (sx + 62, sy - 1),
-            (sx + 50, sy + 10), (sx - 46, sy + 10)]
+    draw.ellipse([sx + 34, sy - 56, sx + 44, sy - 50], fill=(205, 200, 190))
+    # warm glow behind the flames (wider than v7 — the ship is wider)
+    draw.ellipse([sx - 40, sy - 40, sx + 40, sy - 10], fill=(250, 195, 95))
+    # hull: pointed bow right, slanted transom stern, ~150px wide,
+    # 20px tall. Vertices jittered 1.5px (seeded) so the edge is rough,
+    # not ruler-straight — kept from v7
+    hull = [(sx - 68, sy - 8), (sx + 52, sy - 8), (sx + 82, sy - 2),
+            (sx + 66, sy + 12), (sx - 56, sy + 12)]
     hull = _jitter_pts(hull, 1.5, 203)
     draw.polygon(hull, fill=INK)
-    # white deck line (follows the deck up the bow slope) + thin grey
-    # stripe just under it, so the hull has a lit edge
-    draw.line([(sx - 58, sy - 6), (sx + 38, sy - 6), (sx + 62, sy - 1)],
-              fill=(255, 255, 255), width=1)
-    draw.line([(sx - 56, sy - 3), (sx + 46, sy - 3)], fill=(110, 110, 110), width=2)
-    # portholes: small pale dots in a row along the hull
-    for px in range(-48, 44, 10):
-        draw.ellipse([sx + px - 1, sy + 3, sx + px + 1, sy + 5],
-                     fill=(210, 210, 205))
-    # bow gun turret: low trapezoid on the foredeck + barrel pointing
-    # forward-up
-    draw.polygon([(sx + 34, sy - 6), (sx + 48, sy - 6), (sx + 45, sy - 12),
-                  (sx + 37, sy - 12)], fill=(60, 60, 60))
-    draw.line([(sx + 46, sy - 11), (sx + 58, sy - 15)], fill=INK, width=3)
+    # white waterline (THICK, 3px) along the deck + wide light-grey
+    # stripe just under it, so the hull has a bold lit edge
+    draw.line([(sx - 68, sy - 8), (sx + 52, sy - 8), (sx + 82, sy - 2)],
+              fill=(255, 255, 255), width=3)
+    draw.line([(sx - 66, sy - 3), (sx + 52, sy - 3), (sx + 80, sy + 3)],
+              fill=(170, 170, 170), width=3)
+    # portholes: FEWER but BIGGER — 6 large pale dots along the hull
+    for px in (-56, -36, -16, 4, 24, 44):
+        draw.ellipse([sx + px - 3, sy + 2, sx + px + 3, sy + 8],
+                     fill=(235, 235, 228))
+    # bow gun turret: BIGGER trapezoid on the foredeck + thicker barrel
+    # pointing forward-up
+    draw.polygon([(sx + 38, sy - 8), (sx + 58, sy - 8), (sx + 54, sy - 17),
+                  (sx + 42, sy - 17)], fill=(70, 70, 70))
+    draw.line([(sx + 56, sy - 15), (sx + 72, sy - 20)], fill=INK, width=4)
     # bridge tower, right of centre so it stays readable beside the
-    # fire: two stepped blocks with lit windows
-    draw.rectangle([sx + 2, sy - 22, sx + 30, sy - 6], fill=GREY)
-    draw.rectangle([sx + 2, sy - 22, sx + 30, sy - 18], fill=(140, 140, 140))
-    draw.rectangle([sx + 8, sy - 32, sx + 26, sy - 22], fill=(80, 80, 80))
-    for wx in (11, 17, 23):
-        draw.rectangle([sx + wx, sy - 29, sx + wx + 3, sy - 25],
-                       fill=(180, 210, 230))
+    # fire: BIGGER blocks, LIGHTER grey (v8: superstructure lightened
+    # for contrast against the black hull and the fire), dark outlines
+    draw.rectangle([sx + 4, sy - 26, sx + 36, sy - 8], fill=(150, 150, 150),
+                   outline=INK, width=2)
+    draw.rectangle([sx + 4, sy - 26, sx + 36, sy - 22], fill=(195, 195, 195))
+    draw.rectangle([sx + 10, sy - 38, sx + 32, sy - 26], fill=(115, 115, 115),
+                   outline=INK, width=2)
+    # 2 BIG lit windows on the upper bridge block
+    for wx0 in (13, 22):
+        draw.rectangle([sx + wx0, sy - 35, sx + wx0 + 7, sy - 28],
+                       fill=(185, 220, 240), outline=INK, width=1)
     # funnel, slanted, left of the bridge — right where the fire is
-    draw.polygon([(sx - 20, sy - 6), (sx - 12, sy - 6), (sx - 14, sy - 20),
-                  (sx - 22, sy - 20)], fill=(60, 60, 60))
-    draw.rectangle([sx - 22, sy - 22, sx - 14, sy - 20], fill=INK)
+    draw.polygon([(sx - 28, sy - 8), (sx - 17, sy - 8), (sx - 19, sy - 26),
+                  (sx - 30, sy - 26)], fill=(70, 70, 70))
+    draw.rectangle([sx - 30, sy - 28, sx - 19, sy - 26], fill=INK)
     # LAYERED flames over the funnel/deck: red outer tongues, orange
-    # middle, yellow core — the fire reads as flames, not a blob
-    for cx, tip, hw, seed in [(-14, -58, 11, 231), (-32, -46, 8, 232),
-                               (4, -48, 8, 233)]:
-        _flame(draw, sx + cx, sy - 14, sy + tip, hw, (215, 50, 25), seed)
-    for cx, tip, hw, seed in [(-14, -48, 8, 234), (-28, -38, 6, 235),
-                               (0, -40, 6, 236)]:
-        _flame(draw, sx + cx, sy - 14, sy + tip, hw, (248, 140, 40), seed)
-    for cx, tip, hw, seed in [(-14, -38, 5, 237), (-22, -30, 4, 238),
-                               (-4, -32, 4, 239)]:
-        _flame(draw, sx + cx, sy - 14, sy + tip, hw, (255, 210, 80), seed)
+    # middle, yellow core — v8: one more red tongue, wider tongues,
+    # base on the higher deck (sy-8)
+    for cx, tip, hw, seed in [(-30, -54, 9, 231), (-12, -60, 11, 232),
+                               (4, -48, 8, 233), (-44, -44, 8, 240)]:
+        _flame(draw, sx + cx, sy - 8, sy + tip, hw, (215, 50, 25), seed)
+    for cx, tip, hw, seed in [(-28, -46, 8, 234), (-12, -50, 9, 235),
+                               (0, -40, 7, 236)]:
+        _flame(draw, sx + cx, sy - 8, sy + tip, hw, (248, 140, 40), seed)
+    for cx, tip, hw, seed in [(-24, -38, 6, 237), (-12, -42, 7, 238),
+                               (-2, -34, 5, 239)]:
+        _flame(draw, sx + cx, sy - 8, sy + tip, hw, (255, 210, 80), seed)
     # radar mast + antenna whip on the bridge top — drawn AFTER the
-    # flames so the mast silhouette still reads against the fire/sky
-    draw.line([(sx + 24, sy - 32), (sx + 24, sy - 46)], fill=INK, width=2)
-    draw.line([(sx + 16, sy - 46), (sx + 32, sy - 46)], fill=INK, width=2)
-    draw.line([(sx + 30, sy - 32), (sx + 30, sy - 42)], fill=INK, width=1)
-    # waves under the hull (in the sea, just above the coast)
-    for wy in (sy + 12, sy + 14):
-        draw.line([(sx - 62, wy), (sx - 30, wy - 2), (sx, wy), (sx + 30, wy - 2),
-                   (sx + 62, wy)], fill=BLUE2, width=1)
+    # flames so the mast silhouette still reads against the fire/sky;
+    # v8: thicker mast + bigger crossbar
+    draw.line([(sx + 26, sy - 38), (sx + 26, sy - 52)], fill=INK, width=3)
+    draw.line([(sx + 16, sy - 52), (sx + 36, sy - 52)], fill=INK, width=3)
+    draw.line([(sx + 31, sy - 38), (sx + 31, sy - 48)], fill=INK, width=2)
+    # waves under the hull (in the sea, just above the coast) — v8 ends
+    # at sx+66 so the line stops 6px short of the BENGHAZI label
+    for wy in (sy + 14, sy + 16):
+        draw.line([(sx - 70, wy), (sx - 35, wy - 2), (sx, wy), (sx + 35, wy - 2),
+                   (sx + 66, wy)], fill=BLUE2, width=1)
     # thick red arrow: drone path to the ship, from the upper left
-    draw.line([(x0 + 30, y0 + 10), (sx - 62, sy - 8)], fill=RED, width=4)
-    draw.polygon([(sx - 62, sy - 8), (sx - 74, sy - 14), (sx - 70, sy)], fill=RED)
+    draw.line([(x0 + 30, y0 + 10), (sx - 68, sy - 8)], fill=RED, width=4)
+    draw.polygon([(sx - 68, sy - 8), (sx - 80, sy - 14), (sx - 76, sy)], fill=RED)
 
 
 def draw_house_chart(img, draw, x0, y0, w, h):
