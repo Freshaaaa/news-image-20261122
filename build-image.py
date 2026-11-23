@@ -474,8 +474,9 @@ def draw_world_map(draw, x0, y0, w, h):
 
 def draw_turkiye(draw, x0, y0, w, h):
     """Türkiye with a readable coastline: Black Sea north, Mediterranean
-    south with the Antalya bay, Aegean notches west. The draft-text box is
-    a single line at the bottom so the map (and the Antalya pin) stay
+    south with the Antalya bay, Aegean notches west. Istanbul + Ankara
+    marked, an OVERTIME clock top-right, and the draft-text box as a
+    single line at the bottom so the map (and the Antalya pin) stay
     visible. Everything stays inside (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
     poly = [(0.03, 0.36), (0.05, 0.26), (0.08, 0.19), (0.15, 0.16),
@@ -488,12 +489,25 @@ def draw_turkiye(draw, x0, y0, w, h):
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
     draw.polygon(pts, fill=LAND2, outline=INK)
     draw.text((x0 + 6, y0 + 1), "TÜRKIYE", font=font(SANSB, 9), fill=INK)
-    draw.text((x0 + 118, y0 + 1), "BLACK SEA", font=font(SANS, 7), fill=BLUE2)
+    draw.text((x0 + 100, y0 + 1), "BLACK SEA", font=font(SANS, 7), fill=BLUE2)
+    # OVERTIME clock, top right (in the Black Sea, clear of the land)
+    cx, cy = x0 + w - 14, y0 + 13
+    draw.ellipse([cx - 7, cy - 7, cx + 7, cy + 7], fill=(255, 255, 255), outline=RED, width=2)
+    draw.line([(cx, cy), (cx, cy - 4)], fill=RED, width=1)
+    draw.line([(cx, cy), (cx + 3, cy + 1)], fill=RED, width=1)
+    draw.text((cx - 58, cy - 4), "OVERTIME", font=font(SANSB, 7), fill=RED)
+    # Istanbul (north-west) + Ankara (central) markers
+    ix, iy = x0 + 0.16 * w, y0 + 0.26 * h
+    draw.ellipse([ix - 3, iy - 3, ix + 3, iy + 3], fill=INK, outline=(255, 255, 255), width=1)
+    draw.text((ix + 5, iy - 4), "ISTANBUL", font=font(SANS, 6), fill=INK)
+    kx, ky = x0 + 0.42 * w, y0 + 0.38 * h
+    draw.ellipse([kx - 3, ky - 3, kx + 3, ky + 3], fill=INK, outline=(255, 255, 255), width=1)
+    draw.text((kx + 5, ky - 4), "ANKARA", font=font(SANS, 6), fill=INK)
     # Antalya pin on the south coast, at the bay dip
-    ax, ay = x0 + 0.66 * w, y0 + 0.58 * h
+    ax, ay = x0 + 0.66 * w, y0 + 0.60 * h
     draw.ellipse([ax - 5, ay - 5, ax + 5, ay + 5], fill=RED, outline=(255, 255, 255), width=1)
-    draw.text((ax + 8, y0 + 38), "ANTALYA", font=font(SANSB, 8), fill=RED)
-    draw.text((x0 + 6, y0 + 39), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
+    draw.text((ax + 8, ay - 4), "ANTALYA", font=font(SANSB, 8), fill=RED)
+    draw.text((x0 + 6, y0 + 0.72 * h), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
     # draft-text box: one line, bottom
     bx, by = x0 + 6, y0 + h - 14
     draw.rectangle([bx, by, x0 + w - 6, y0 + h - 3], fill=(255, 255, 255), outline=RED, width=1)
@@ -505,9 +519,10 @@ def draw_turkiye(draw, x0, y0, w, h):
 
 def draw_libya(draw, x0, y0, w, h):
     """Libya / Mediterranean: sea on top, land below with the Gulf of
-    Sidra dip, a BIG burning warship offshore in the sea, red SEA DRONE
-    arrow, Benghazi pin on the north-east coast. Everything stays inside
-    the box (x0, y0, w, h)."""
+    Sidra dip, a BIG burning warship offshore, a second smaller ship in
+    the distance, a burning port facility on the coast near Benghazi,
+    and a thick red SEA DRONE arrow. Everything stays inside the box
+    (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
     # land: north coast with the Sidra gulf dip, extends past the bottom
     poly = [(0.02, 0.48), (0.10, 0.44), (0.20, 0.42), (0.30, 0.44),
@@ -518,81 +533,106 @@ def draw_libya(draw, x0, y0, w, h):
     draw.polygon(pts, fill=LAND2, outline=INK)
     draw.text((x0 + 6, y0 + 2), "SEA DRONE", font=font(SANSB, 7), fill=RED)
     draw.text((x0 + w - 100, y0 + 2), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
-    draw.text((x0 + 8, y0 + 44), "LIBYA", font=font(SANSB, 9), fill=INK)
-    # Benghazi pin on the north-east coast
+    draw.text((x0 + 8, y0 + 0.62 * h), "LIBYA", font=font(SANSB, 9), fill=INK)
+    # Benghazi pin on the north-east coast, label to its left
     bx, by = x0 + 0.70 * w, y0 + 0.42 * h
     draw.ellipse([bx - 5, by - 5, bx + 5, by + 5], fill=RED, outline=(255, 255, 255), width=1)
-    draw.text((bx + 8, y0 + 20), "BENGHAZI", font=font(SANSB, 7), fill=RED)
+    draw.text((bx - 56, by - 4), "BENGHAZI", font=font(SANSB, 7), fill=RED)
+    # burning port facility on the coast, east of Benghazi
+    fx, fy = x0 + 0.82 * w, y0 + 0.47 * h
+    draw.ellipse([fx - 4, fy - 14, fx + 2, fy - 9], fill=(120, 115, 105))
+    draw.ellipse([fx + 1, fy - 12, fx + 6, fy - 8], fill=(140, 135, 125))
+    draw.ellipse([fx - 4, fy - 10, fx + 4, fy - 4], fill=(240, 180, 40), outline=RED)
+    for dx, dy in [(-4, -12), (0, -13), (4, -11)]:
+        draw.line([(fx, fy - 5), (fx + dx, fy + dy)], fill=RED, width=2)
+    draw.rectangle([fx - 8, fy - 4, fx + 8, fy + 2], fill=(60, 60, 60))
+    # second ship, small, in the distance (lower left of the sea)
+    sx2, sy2 = x0 + 0.14 * w, y0 + 0.30 * h
+    draw.polygon([(sx2 - 11, sy2), (sx2 + 11, sy2), (sx2 + 8, sy2 + 4),
+                  (sx2 - 8, sy2 + 4)], fill=(70, 70, 70))
+    draw.rectangle([sx2 - 6, sy2 - 5, sx2 + 6, sy2], fill=GREY)
+    draw.ellipse([sx2 - 2, sy2 - 10, sx2 + 2, sy2 - 6], fill=(150, 145, 135))
+    draw.line([(sx2 - 13, sy2 + 6), (sx2 + 13, sy2 + 6)], fill=BLUE2, width=1)
     # BIG burning warship offshore, in the sea above the coast
-    sx, sy = x0 + 0.45 * w, y0 + 20
+    sx, sy = x0 + 0.42 * w, y0 + 0.34 * h
     # smoke puffs above the fire
-    draw.ellipse([sx - 5, sy - 19, sx + 1, sy - 14], fill=(120, 115, 105))
-    draw.ellipse([sx + 1, sy - 18, sx + 7, sy - 13], fill=(140, 135, 125))
+    draw.ellipse([sx - 7, sy - 27, sx + 1, sy - 20], fill=(120, 115, 105))
+    draw.ellipse([sx + 1, sy - 26, sx + 9, sy - 19], fill=(140, 135, 125))
+    draw.ellipse([sx - 3, sy - 32, sx + 4, sy - 26], fill=(160, 155, 145))
     # fire: orange core + red flame lines
-    draw.ellipse([sx - 5, sy - 15, sx + 5, sy - 7], fill=(240, 180, 40), outline=RED)
-    for dx, dy in [(-6, -17), (0, -18), (6, -16)]:
-        draw.line([(sx, sy - 9), (sx + dx, sy + dy)], fill=RED, width=2)
+    draw.ellipse([sx - 7, sy - 21, sx + 7, sy - 10], fill=(240, 180, 40), outline=RED)
+    for dx, dy in [(-8, -24), (0, -26), (8, -23)]:
+        draw.line([(sx, sy - 12), (sx + dx, sy + dy)], fill=RED, width=2)
     # superstructure + funnel + mast
-    draw.rectangle([sx - 9, sy - 9, sx + 9, sy - 3], fill=GREY)
-    draw.rectangle([sx - 13, sy - 7, sx - 7, sy - 3], fill=(60, 60, 60))
-    draw.line([(sx + 5, sy - 9), (sx + 5, sy - 15)], fill=INK, width=2)
+    draw.rectangle([sx - 12, sy - 12, sx + 12, sy - 4], fill=GREY)
+    draw.rectangle([sx - 17, sy - 10, sx - 9, sy - 4], fill=(60, 60, 60))
+    draw.line([(sx + 7, sy - 12), (sx + 7, sy - 20)], fill=INK, width=2)
     # hull: dark, wider than tall
-    draw.polygon([(sx - 17, sy - 3), (sx + 17, sy - 3), (sx + 12, sy + 6),
-                  (sx - 12, sy + 6)], fill=INK)
-    draw.line([(sx - 17, sy - 3), (sx + 17, sy - 3)], fill=(255, 255, 255), width=1)
+    draw.polygon([(sx - 24, sy - 4), (sx + 24, sy - 4), (sx + 17, sy + 8),
+                  (sx - 17, sy + 8)], fill=INK)
+    draw.line([(sx - 24, sy - 4), (sx + 24, sy - 4)], fill=(255, 255, 255), width=1)
     # waves under the hull
-    for wy in (sy + 8, sy + 11):
-        draw.line([(sx - 20, wy), (sx - 10, wy - 2), (sx, wy), (sx + 10, wy - 2),
-                   (sx + 20, wy)], fill=BLUE2, width=1)
-    # red arrow: drone path to the ship, from the upper left
-    draw.line([(x0 + 30, y0 + 10), (sx - 19, sy - 7)], fill=RED, width=2)
-    draw.polygon([(sx - 19, sy - 7), (sx - 27, sy - 11), (sx - 24, sy - 2)], fill=RED)
+    for wy in (sy + 10, sy + 13):
+        draw.line([(sx - 28, wy), (sx - 14, wy - 2), (sx, wy), (sx + 14, wy - 2),
+                   (sx + 28, wy)], fill=BLUE2, width=1)
+    # thick red arrow: drone path to the ship, from the upper left
+    draw.line([(x0 + 30, y0 + 10), (sx - 27, sy - 10)], fill=RED, width=3)
+    draw.polygon([(sx - 27, sy - 10), (sx - 37, sy - 15), (sx - 33, sy - 3)], fill=RED)
 
 
 def draw_house_chart(draw, x0, y0, w, h):
-    """US House seats: 258 Dem (blue) vs 177 Rep (red), stacked bar + Capitol.
-    Everything stays inside the box (x0, y0, w, h)."""
+    """US House seats: 258 Dem (blue) vs 177 Rep (red), stacked bar + a
+    BIG detailed Capitol (ribbed dome, lantern, columned base) and a small
+    US flag. Everything stays inside the box (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
     draw.text((x0 + 6, y0 + 3), "US HOUSE  ·  435 SEATS", font=font(SANSB, 9), fill=INK)
-    # Capitol dome, BIG and detailed, top right: columned base, drum,
-    # ribbed dome, lantern + finial. Base sits just above the bar
-    # (bar top = y0+32).
-    cx = x0 + w - 32
-    base_top = y0 + 24
+    # small US flag, top left under the title
+    fx, fy = x0 + 12, y0 + 20
+    draw.line([(fx, fy), (fx, fy + 22)], fill=INK, width=2)
+    for i, c in enumerate([RED, (255, 255, 255), RED, (255, 255, 255)]):
+        draw.rectangle([fx + 2, fy + i * 4, fx + 32, fy + (i + 1) * 4], fill=c)
+    draw.rectangle([fx + 2, fy, fx + 14, fy + 8], fill=BLUE)
+    draw.ellipse([fx + 5, fy + 3, fx + 7, fy + 5], fill=(255, 255, 255))
+    draw.ellipse([fx + 9, fy + 3, fx + 11, fy + 5], fill=(255, 255, 255))
+    draw.rectangle([fx + 2, fy, fx + 32, fy + 16], outline=INK)
+    # Capitol dome, BIG and detailed, top right. base_top = y0+48;
+    # the bar sits at y0+58, so the base (ends y0+56) just clears it.
+    cx = x0 + w - 40
+    base_top = y0 + 48
     # dome: smooth half-ellipse polygon (offsets from cx, base_top)
-    dome = [(-17, -6), (-16, -10), (-13, -14), (-9, -16), (-5, -18),
-            (0, -18), (5, -18), (9, -16), (13, -14), (16, -10), (17, -6)]
+    dome = [(-24, -8), (-23, -14), (-19, -20), (-13, -24), (-7, -26),
+            (0, -26), (7, -26), (13, -24), (19, -20), (23, -14), (24, -8)]
     draw.polygon([(cx + dx, base_top + dy) for dx, dy in dome],
                  fill=(255, 255, 255), outline=INK)
     # ribs on the dome
-    for dx, top in [(-11, -15), (-6, -17), (0, -18), (6, -17), (11, -15)]:
-        draw.line([(cx + dx, base_top + top), (cx + dx, base_top - 7)],
+    for dx, top in [(-16, -23), (-8, -25), (0, -26), (8, -25), (16, -23)]:
+        draw.line([(cx + dx, base_top + top), (cx + dx, base_top - 9)],
                   fill=GREY, width=1)
     # lantern + finial
-    draw.rectangle([cx - 4, base_top - 22, cx + 4, base_top - 18],
+    draw.rectangle([cx - 5, base_top - 32, cx + 5, base_top - 26],
                    fill=(255, 255, 255), outline=INK)
-    draw.ellipse([cx - 2, base_top - 24, cx + 2, base_top - 22], fill=INK)
+    draw.ellipse([cx - 2, base_top - 34, cx + 2, base_top - 32], fill=INK)
     # drum
-    draw.rectangle([cx - 13, base_top - 6, cx + 13, base_top],
+    draw.rectangle([cx - 18, base_top - 8, cx + 18, base_top],
                    fill=(255, 255, 255), outline=INK)
     # base with columns
-    draw.rectangle([cx - 24, base_top, cx + 24, base_top + 8],
+    draw.rectangle([cx - 34, base_top, cx + 34, base_top + 8],
                    fill=(255, 255, 255), outline=INK)
-    for dx in (-18, -12, -6, 0, 6, 12, 18):
+    for dx in (-28, -21, -14, -7, 0, 7, 14, 21, 28):
         draw.line([(cx + dx, base_top + 1), (cx + dx, base_top + 7)],
                   fill=GREY, width=1)
     # stacked bar
-    bx, by, bw, bh = x0 + 10, y0 + 32, w - 20, 15
+    bx, by, bw, bh = x0 + 10, y0 + 58, w - 20, 18
     dem_w = bw * 258 / 435
     draw.rectangle([bx, by, bx + dem_w, by + bh], fill=BLUE)
     draw.rectangle([bx + dem_w, by, bx + bw, by + bh], fill=RED)
     draw.rectangle([bx, by, bx + bw, by + bh], outline=INK, width=1)
     f = font(SANSB, 9)
-    draw.text((bx + 5, by + 3), "258 DEM", font=f, fill=(255, 255, 255))
+    draw.text((bx + 5, by + 4), "258 DEM", font=f, fill=(255, 255, 255))
     t = "177 REP"
-    draw.text((bx + bw - draw.textlength(t, font=f) - 5, by + 3), t, font=f,
+    draw.text((bx + bw - draw.textlength(t, font=f) - 5, by + 4), t, font=f,
               fill=(255, 255, 255))
-    draw.text((x0 + 10, by + bh + 3), "LARGEST MAJORITY SINCE 1992",
+    draw.text((x0 + 10, by + bh + 4), "LARGEST MAJORITY SINCE 1992",
               font=font(SANSB, 9), fill=RED)
 
 
@@ -604,31 +644,31 @@ def render():
     RX = W - MX
 
     # ---- masthead ----
-    y = 10
+    y = 8
     d.text((MX, y), "Sunday 22 November 2026", font=font(SERIFB, 40), fill=INK)
     t = "ONE DAY OF WORLD NEWS, ONE PICTURE"
     d.text((RX - tw(d, t, font(SANSB, 10)), y + 8), t, font=font(SANSB, 10), fill=RED)
     t2 = "THE WORLD ON A SUNDAY"
-    d.text((RX - tw(d, t2, font(SANS, 9)), y + 24), t2, font=font(SANS, 9), fill=GREY)
-    y = 56
+    d.text((RX - tw(d, t2, font(SANS, 9)), y + 22), t2, font=font(SANS, 9), fill=GREY)
+    y = 54
     d.text((MX, y), "44 STORIES  ·  9 REGIONS  ·  19 FIELDS  ·  ALL FROM THIS SUNDAY",
            font=font(SANSB, 12), fill=INK)
-    y = 74
+    y = 72
     rule(d, MX, RX, y, INK, 2)
     rule(d, MX, RX, y + 3, INK, 1)
 
     # ---- THE DAY IN UTC ----
-    y = 84
-    d.rectangle([MX, y, RX, y + 46], fill=PAPER2, outline=INK, width=1)
-    d.text((MX + 6, y + 3), "THE DAY IN UTC", font=font(SANSB, 9), fill=RED)
+    y = 81
+    d.rectangle([MX, y, RX, y + 38], fill=PAPER2, outline=INK, width=1)
+    d.text((MX + 6, y + 2), "THE DAY IN UTC", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 7.0
     for i, (t, txt) in enumerate(UTC_STRIP):
         x = MX + 6 + i * col_w
-        d.text((x, y + 15), t, font=font(SANSB, 11), fill=RED)
-        para(d, x, y + 29, txt, font(SANS, 8), INK, col_w - 6, lh=9, max_lines=2)
+        d.text((x, y + 12), t, font=font(SANSB, 11), fill=RED)
+        para(d, x, y + 26, txt, font(SANS, 8), INK, col_w - 6, lh=9, max_lines=1)
 
     # ---- THE DAY IN NUMBERS ----
-    y = 136
+    y = 125
     d.rectangle([MX, y, RX, y + 46], fill=(255, 255, 255), outline=INK, width=1)
     d.text((MX + 6, y + 3), "THE DAY IN NUMBERS", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 6.0
@@ -637,9 +677,9 @@ def render():
         d.text((x, y + 15), num, font=font(SERIFB, 17), fill=INK)
         para(d, x, y + 33, txt, font(SANS, 8), GREY, col_w - 6, lh=9, max_lines=2)
 
-    # ---- 3 big leads ----
-    y = 188
-    lead_h = 176
+    # ---- 3 big leads (illustration boxes now 96px tall) ----
+    y = 177
+    lead_h = 212
     col_w = (RX - MX - 12) / 3.0
     for i, (num, kick, head, deck, src, conf) in enumerate(LEADS):
         x = MX + i * (col_w + 6)
@@ -650,7 +690,7 @@ def render():
         yy = y + 48
         para(d, x + 6, yy, deck, font(SANS, 10), INK, col_w - 12, lh=12, max_lines=3)
         # illustration
-        ih = 62
+        ih = 96
         iy = y + lead_h - ih - 22
         if num == 1:
             draw_turkiye(d, x + 6, iy, col_w - 12, ih)
@@ -663,57 +703,56 @@ def render():
         d.text((x + 6, sy + 2), src, font=font(SANS, 8), fill=GREY)
         badge(d, x + col_w - 62, sy, conf)
 
-    # ---- 10 medium cards, 2 rows of 5 ----
-    y = 370
+    # ---- 10 medium cards, 2 rows of 5 (compressed to 74px) ----
+    y = 395
     card_w = (RX - MX - 16) / 5.0
-    card_h = 92
+    card_h = 74
     for row in range(2):
         for col in range(5):
             m = MEDIUM[row * 5 + col]
             num, kick, head, deck, src, conf, ic = m
             x = MX + col * (card_w + 4)
-            yy = y + row * (card_h + 4)
+            yy = y + row * (card_h + 3)
             d.rectangle([x, yy, x + card_w, yy + card_h], fill=(255, 255, 255),
                         outline=LINE, width=1)
             d.text((x + 5, yy + 3), f"{num}  {kick}", font=font(SANSB, 7), fill=RED)
-            icon(d, ic, x + 18, yy + 34, 26)
+            icon(d, ic, x + 18, yy + 28, 26)
             d.text((x + 38, yy + 24), "", font=font(SANS, 8), fill=INK)
-            para(d, x + 38, yy + 20, head, font(SANSB, 10), INK, card_w - 44, lh=11,
+            para(d, x + 38, yy + 17, head, font(SANSB, 10), INK, card_w - 44, lh=11,
                  max_lines=2)
-            para(d, x + 5, yy + 52, deck, font(SANS, 8), INK, card_w - 10, lh=10,
+            para(d, x + 5, yy + 42, deck, font(SANS, 8), INK, card_w - 10, lh=9,
                  max_lines=2)
             sy = yy + card_h - 13
             d.text((x + 5, sy + 1), src, font=font(SANS, 7), fill=GREY)
             badge(d, x + card_w - 60, sy, conf)
 
-    # ---- STORIES BY REGION ----
-    y = 562
-    d.text((MX, y), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
-    bx = MX + 108
+    # ---- STORIES BY REGION (single 12px row: label + bar + legend) ----
+    y = 552
+    d.text((MX, y + 2), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
+    bx = MX + 118
     total = sum(n for _, n, _ in REGIONS)
-    bar_w = RX - bx
+    legend = "  ·  ".join(f"{name} {n}" for name, n, _ in REGIONS)
+    legend_w = int(tw(d, legend, font(SANS, 7)))
+    bar_w = RX - bx - legend_w - 8
     x = bx
     for name, n, col in REGIONS:
         wseg = bar_w * n / total
-        d.rectangle([x, y, x + wseg - 1, y + 12], fill=col)
+        d.rectangle([x, y + 2, x + wseg - 1, y + 12], fill=col)
         x += wseg
-    # legend line under the bar (segment labels would collide on narrow bars)
-    y = 578
-    legend = "  ·  ".join(f"{name} {n}" for name, n, _ in REGIONS)
-    d.text((bx, y), legend, font=font(SANS, 8), fill=INK)
+    d.text((bx + bar_w + 8, y + 2), legend, font=font(SANS, 7), fill=INK)
 
-    # ---- WHERE IT HAPPENED ----
-    y = 592
+    # ---- WHERE IT HAPPENED (taller strip: 150px, Europe breathes) ----
+    y = 570
     d.text((MX, y), "WHERE IT HAPPENED  ·  PINS 1–13  (13 = IN ORBIT)",
            font=font(SANSB, 10), fill=INK)
-    draw_world_map(d, MX, y + 16, RX - MX, 118)
+    draw_world_map(d, MX, y + 15, RX - MX, 150)
 
     # ---- ALSO ON ----
-    y = 736
+    y = 741
     d.text((MX, y), "ALSO ON SUNDAY 22 NOVEMBER — 31 MORE STORIES",
            font=font(SANSB, 10), fill=INK)
     rule(d, MX, RX, y + 15, INK, 1)
-    y = 756
+    y = 761
     col_w = (RX - MX - 12) / 2.0
     row_h = 11
     f_head = font(SANS, 9)
@@ -740,29 +779,29 @@ def render():
             d.text((x + col_w - src_w, yy), src, font=f_src, fill=GREY)
             yy += row_h
         max_y = max(max_y, yy)
-    assert max_y <= 934, f"ALSO ON overflow: ends at y={max_y}"
+    assert max_y <= 940, f"ALSO ON overflow: ends at y={max_y}"
 
     # ---- DATE CHECK + HOW SURE ----
-    y = 934
-    d.rectangle([MX, y, RX, y + 60], fill=(255, 255, 255), outline=RED, width=2)
+    y = 943
+    d.rectangle([MX, y, RX, y + 52], fill=(255, 255, 255), outline=RED, width=2)
     d.text((MX + 6, y + 2), "DATE CHECK — LEFT OUT AS OLDER NEWS",
            font=font(SANSB, 9), fill=RED)
-    para(d, MX + 6, y + 14,
+    para(d, MX + 6, y + 12,
          "Shenzhen summit (19–20 Nov) · ICJ Rohingya ruling (19 Nov) · GTA VI $3.79bn "
          "(19–20 Nov) · Anthropic IPO $93.5bn (20 Nov) · 'El Chapo Isidro' arrested "
          "(20–21 Nov) · Akvan landfall (20 Nov) · Banda Sea M6.8 (21 Nov)",
          font(SANS, 8), INK, RX - MX - 12, lh=10, max_lines=1)
-    d.text((MX + 6, y + 32),
+    d.text((MX + 6, y + 28),
            "NOT YET: ATP final (23 Nov) · BepiColombo separation (9–10 Dec)",
            font=font(SANSB, 8), fill=INK)
-    d.text((MX + 6, y + 46), "HOW SURE ARE WE?  ",
+    d.text((MX + 6, y + 40), "HOW SURE ARE WE?  ",
            font=font(SANSB, 8), fill=INK)
     xx = MX + 6 + tw(d, "HOW SURE ARE WE?  ", font(SANSB, 8))
-    d.text((xx, y + 46), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
+    d.text((xx, y + 40), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
            font=font(SANS, 8), fill=GREY)
 
     # ---- footer ----
-    y = 998
+    y = 999
     rule(d, MX, RX, y, INK, 1)
     d.text((MX, y + 4),
            "Every story here happened, or was first reported, on Sunday 22 November 2026.",
