@@ -220,9 +220,39 @@ def _hand_outline(draw, pts, col, seed, closed=True):
         pairs = [(pts[i], pts[i + 1]) for i in range(n - 1)]
     for a, b in pairs:
         draw.line([a, b], fill=col, width=1)
+    # v7: stronger pen pressure — half the segments redrawn at 2px, and
+    # long segments sometimes at 3px, so the stroke visibly varies
     for a, b in pairs:
-        if rng.random() < 0.35:
+        r = rng.random()
+        seg = ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5
+        if r < 0.12 and seg > 8:
+            draw.line([a, b], fill=col, width=3)
+        elif r < 0.5:
             draw.line([a, b], fill=col, width=2)
+
+
+def _flame(draw, cx, base_y, tip_y, half_w, color, seed):
+    """One flame tongue: a wavy teardrop from base_y up to tip_y,
+    centred at cx, half-width half_w at the base. Edge points are
+    jittered (seeded) so the tongue reads as a flame, not a smooth
+    blob. Layered tongues (red -> orange -> yellow) replace the flat
+    yellow ellipse of v6."""
+    rng = random.Random(seed)
+    h = base_y - tip_y
+    pts = [
+        (cx - half_w, base_y),
+        (cx - half_w - 2, base_y - 0.35 * h),
+        (cx - half_w * 0.55, base_y - 0.65 * h),
+        (cx - 2, base_y - 0.85 * h),
+        (cx, tip_y),
+        (cx + 2, base_y - 0.85 * h),
+        (cx + half_w * 0.55, base_y - 0.65 * h),
+        (cx + half_w + 2, base_y - 0.35 * h),
+        (cx + half_w, base_y),
+    ]
+    pts = [(x + rng.uniform(-1.5, 1.5), y + rng.uniform(-1.5, 1.5))
+           for x, y in pts]
+    draw.polygon(pts, fill=color)
 
 
 def _watercolor(img, pts, color, alpha=40, seed=7, layers=2):
@@ -415,6 +445,8 @@ def icon(draw, kind, cx, cy, s, col=INK):
         pts = [(cx - s * 0.45, cy + s * 0.1), (cx - s * 0.2, cy - s * 0.15),
                (cx, cy + s * 0.05), (cx + s * 0.2, cy - s * 0.2),
                (cx + s * 0.45, cy + s * 0.35)]
+        # v7: 1px seeded jitter so the line reads hand-drawn, not ruler
+        pts = _jitter_pts(pts, 1.0, 501)
         draw.line(pts, fill=RED, width=4, joint="curve")
         draw.polygon([(cx + s * 0.45, cy + s * 0.35), (cx + s * 0.45, cy + s * 0.2),
                       (cx + s * 0.3, cy + s * 0.35)], fill=RED)
@@ -432,6 +464,8 @@ def icon(draw, kind, cx, cy, s, col=INK):
         pts = [(cx - s * 0.5, cy), (cx - s * 0.3, cy - s * 0.3), (cx - s * 0.12, cy + s * 0.25),
                (cx + s * 0.05, cy - s * 0.35), (cx + s * 0.22, cy + s * 0.2),
                (cx + s * 0.4, cy - s * 0.1), (cx + s * 0.5, cy)]
+        # v7: 1px seeded jitter so the zigzag reads hand-drawn
+        pts = _jitter_pts(pts, 1.0, 502)
         draw.line(pts, fill=RED, width=3, joint="curve")
         draw.line([(cx - s * 0.5, cy + s * 0.4), (cx + s * 0.5, cy + s * 0.4)],
                   fill=GREY, width=2)
@@ -597,15 +631,21 @@ WORLD_POLYS = [
 
 def draw_world_map(img, draw, x0, y0, w, h):
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=SEA, outline=INK, width=1)
+    # v7: richer sea — two watercolor washes over the whole map rect
+    # (drawn before the land so the continents cover them)
+    _watercolor(img, [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)],
+                (150, 185, 210), alpha=22, seed=99)
+    _watercolor(img, [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)],
+                (182, 206, 222), alpha=20, seed=98)
     for pi, poly in enumerate(WORLD_POLYS):
         pts = [world_xy(lat, lon, x0, y0, w, h) for lon, lat in poly]
-        # v6: wavy coastline — seeded jitter (smaller islands get a
-        # smaller amplitude so they keep their shape), watercolor wash,
-        # and a pen-stroke outline instead of the ruler line
+        # v7: wavier coastline — seeded jitter 3.5px on big continents,
+        # 2.0px on small islands (up from 2.5/1.5), watercolor wash, and
+        # a pen-stroke outline instead of the ruler line
         xs = [p[0] for p in pts]
         ys = [p[1] for p in pts]
         big = max(max(xs) - min(xs), max(ys) - min(ys)) > 60
-        amp = 2.5 if big else 1.5
+        amp = 3.5 if big else 2.0
         pts = _jitter_pts(pts, amp, 100 + pi)
         # darker land + darker coastline so continents pop off the sea
         draw.polygon(pts, fill=(212, 196, 152))
@@ -654,6 +694,10 @@ def draw_turkiye(img, draw, x0, y0, w, h):
     "a conference that failed", not just a map. The draft-text box stays
     as a single line at the bottom. Everything stays inside (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
+    # v7: faint watercolor wash over the sea so the background is not a
+    # flat screen fill (drawn before the land so the map covers it)
+    _watercolor(img, [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)],
+                (190, 205, 220), alpha=20, seed=216)
     poly = [(0.03, 0.36), (0.04, 0.31), (0.05, 0.26), (0.08, 0.19), (0.15, 0.16),
             (0.25, 0.15), (0.30, 0.19), (0.35, 0.17), (0.45, 0.15), (0.55, 0.17),
             (0.60, 0.20), (0.65, 0.15), (0.75, 0.17), (0.85, 0.19), (0.89, 0.22),
@@ -662,10 +706,10 @@ def draw_turkiye(img, draw, x0, y0, w, h):
             (0.42, 0.48), (0.34, 0.46), (0.26, 0.44), (0.18, 0.42),
             (0.10, 0.40), (0.06, 0.38), (0.08, 0.34), (0.04, 0.32)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
-    # v6: wavy coastline (seeded jitter, 2.5px — the map stops looking
-    # geometric but keeps its shape), a watercolor wash over the land,
-    # and a pen-stroke outline instead of the ruler line
-    pts = _jitter_pts(pts, 2.5, 201)
+    # v7: wavier coastline (seeded jitter, 3.5px — up from 2.5), a
+    # watercolor wash over the land, and a pen-stroke outline instead
+    # of the ruler line
+    pts = _jitter_pts(pts, 3.5, 201)
     # v5: soft shadow under the map (drawn first, land covers the
     # overlap, only the fringe shows on the sea) + subtle vertical
     # gradient on the land (brighter at the top, a touch darker below)
@@ -736,9 +780,15 @@ def draw_libya(img, draw, x0, y0, w, h):
     # deeper below) instead of a flat fill
     _rect_gradient(img, x0, y0, w, h, (230, 236, 241), (198, 212, 226))
     # v6: a faint watercolor wash over the sea (clipped to the box) so
-    # the water has variation like a wash, not a flat screen fill
+    # the water has variation like a wash, not a flat screen fill.
+    # v7: two more washes in slightly different blues so the sea has
+    # real watercolor depth, not one flat tint
     _watercolor(img, [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)],
                 (150, 180, 200), alpha=25, seed=212)
+    _watercolor(img, [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)],
+                (140, 172, 202), alpha=22, seed=214)
+    _watercolor(img, [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)],
+                (185, 208, 224), alpha=18, seed=215)
     draw.rectangle([x0, y0, x0 + w, y0 + h], outline=INK, width=1)
     # land: north coast lower than v3 (more sea room for the ship +
     # smoke), with the Sidra gulf dip; extends past the bottom
@@ -748,9 +798,9 @@ def draw_libya(img, draw, x0, y0, w, h):
             (0.86, 0.56), (0.90, 0.60), (0.94, 0.58),
             (0.98, 0.68), (0.98, 1.0), (0.0, 1.0), (0.0, 0.66)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
-    # v6: wavy coastline (seeded jitter, 2.5px) + watercolor wash +
-    # pen-stroke coastline instead of the ruler line
-    pts = _jitter_pts(pts, 2.5, 202)
+    # v7: wavier coastline (seeded jitter, 3.5px — up from 2.5) +
+    # watercolor wash + pen-stroke coastline instead of the ruler line
+    pts = _jitter_pts(pts, 3.5, 202)
     draw.polygon(pts, fill=LAND2)
     _watercolor(img, pts, (194, 182, 148), alpha=35, seed=213)
     _hand_outline(draw, pts, INK, seed=222)
@@ -783,39 +833,77 @@ def draw_libya(img, draw, x0, y0, w, h):
     draw.ellipse([sx2 - 2, sy2 - 12, sx2 + 2, sy2 - 7], fill=(150, 145, 135))
     draw.line([(sx2 - 15, sy2 + 7), (sx2 + 15, sy2 + 7)], fill=BLUE2, width=1)
     # BIG burning warship, low in the sea (waterline just above the coast)
+    # v7: REDRAWN as a real warship — pointed bow to the right, slanted
+    # transom stern, stepped bridge tower with lit windows, bow gun
+    # turret, slanted funnel, radar mast + antenna, portholes along the
+    # hull, and LAYERED flames (red -> orange -> yellow tongues) instead
+    # of one big yellow blob. Same footprint as v6: hull ~120px wide,
+    # fire + smoke still above the ship, arrow still points at her.
     sx, sy = x0 + 0.40 * w, y0 + 0.52 * h
-    # smoke: 5 puffs billowing up and to the right (wind), above the
-    # fire — v5: clean gradient, darkest at the base, lightest at the
-    # top, plus a pale highlight on the topmost puff
-    draw.ellipse([sx - 20, sy - 62, sx - 2, sy - 46], fill=(98, 93, 83))
-    draw.ellipse([sx - 6, sy - 64, sx + 12, sy - 48], fill=(118, 113, 103))
-    draw.ellipse([sx + 6, sy - 66, sx + 24, sy - 50], fill=(138, 133, 123))
-    draw.ellipse([sx + 16, sy - 64, sx + 34, sy - 50], fill=(158, 153, 143))
-    draw.ellipse([sx + 26, sy - 60, sx + 42, sy - 48], fill=(172, 167, 157))
+    # smoke: 5 puffs billowing up and to the right (wind) — v7: each
+    # puff jittered a couple px (seeded) so the column reads organic,
+    # darkest at the base, lightest at the top, pale highlight on top
+    _rng = random.Random(205)
+    for dx, dy, rw, rh, col in [
+            (-20, -62, 18, 16, (98, 93, 83)), (-6, -64, 18, 16, (118, 113, 103)),
+            (6, -66, 18, 16, (138, 133, 123)), (16, -64, 18, 14, (158, 153, 143)),
+            (26, -60, 16, 12, (172, 167, 157))]:
+        jx, jy = _rng.uniform(-2, 2), _rng.uniform(-2, 2)
+        draw.ellipse([sx + dx + jx, sy + dy + jy,
+                      sx + dx + rw + jx, sy + dy + rh + jy], fill=col)
     draw.ellipse([sx + 28, sy - 58, sx + 38, sy - 52], fill=(205, 200, 190))
-    # fire: two-tier orange glow + bright core + tall red flame tongues
-    draw.ellipse([sx - 44, sy - 54, sx + 44, sy - 16], fill=(250, 195, 95))
-    draw.ellipse([sx - 38, sy - 50, sx + 38, sy - 18], fill=(248, 160, 55))
-    draw.ellipse([sx - 32, sy - 48, sx + 32, sy - 20], fill=(240, 180, 40), outline=RED)
-    draw.ellipse([sx - 15, sy - 40, sx + 15, sy - 22], fill=(255, 215, 90))
-    for dx, dy in [(-26, -52), (0, -56), (26, -50)]:
-        draw.line([(sx, sy - 24), (sx + dx, sy + dy)], fill=RED, width=4)
-    # superstructure + funnel + mast — v5: light strip on top of the
-    # superstructure so the firelight reads as shading, not flat grey
-    draw.rectangle([sx - 28, sy - 20, sx + 28, sy - 6], fill=GREY)
-    draw.rectangle([sx - 28, sy - 20, sx + 28, sy - 16], fill=(140, 140, 140))
-    draw.rectangle([sx - 42, sy - 16, sx - 30, sy - 6], fill=(60, 60, 60))
-    draw.line([(sx + 22, sy - 20), (sx + 22, sy - 36)], fill=INK, width=2)
-    # hull: dark, 120px wide — v5: thin grey highlight just under the
-    # white waterline so the hull has a lit edge. v6: the four hull
-    # vertices are jittered 1.5px (seeded) so the hull edge is rough,
-    # not ruler-straight
-    hull = [(sx - 60, sy - 6), (sx + 60, sy - 6), (sx + 48, sy + 10),
-            (sx - 48, sy + 10)]
+    # warm glow behind the flames (smaller than v6's blob — the layered
+    # flames now do the work)
+    draw.ellipse([sx - 34, sy - 44, sx + 34, sy - 14], fill=(250, 195, 95))
+    # hull: pointed bow right, slanted transom stern, ~120px wide.
+    # v6's vertices were jittered 1.5px (seeded) so the edge is rough,
+    # not ruler-straight — kept here
+    hull = [(sx - 58, sy - 6), (sx + 38, sy - 6), (sx + 62, sy - 1),
+            (sx + 50, sy + 10), (sx - 46, sy + 10)]
     hull = _jitter_pts(hull, 1.5, 203)
     draw.polygon(hull, fill=INK)
-    draw.line([(sx - 60, sy - 6), (sx + 60, sy - 6)], fill=(255, 255, 255), width=1)
-    draw.line([(sx - 56, sy - 3), (sx + 56, sy - 3)], fill=(110, 110, 110), width=2)
+    # white deck line (follows the deck up the bow slope) + thin grey
+    # stripe just under it, so the hull has a lit edge
+    draw.line([(sx - 58, sy - 6), (sx + 38, sy - 6), (sx + 62, sy - 1)],
+              fill=(255, 255, 255), width=1)
+    draw.line([(sx - 56, sy - 3), (sx + 46, sy - 3)], fill=(110, 110, 110), width=2)
+    # portholes: small pale dots in a row along the hull
+    for px in range(-48, 44, 10):
+        draw.ellipse([sx + px - 1, sy + 3, sx + px + 1, sy + 5],
+                     fill=(210, 210, 205))
+    # bow gun turret: low trapezoid on the foredeck + barrel pointing
+    # forward-up
+    draw.polygon([(sx + 34, sy - 6), (sx + 48, sy - 6), (sx + 45, sy - 12),
+                  (sx + 37, sy - 12)], fill=(60, 60, 60))
+    draw.line([(sx + 46, sy - 11), (sx + 58, sy - 15)], fill=INK, width=3)
+    # bridge tower, right of centre so it stays readable beside the
+    # fire: two stepped blocks with lit windows
+    draw.rectangle([sx + 2, sy - 22, sx + 30, sy - 6], fill=GREY)
+    draw.rectangle([sx + 2, sy - 22, sx + 30, sy - 18], fill=(140, 140, 140))
+    draw.rectangle([sx + 8, sy - 32, sx + 26, sy - 22], fill=(80, 80, 80))
+    for wx in (11, 17, 23):
+        draw.rectangle([sx + wx, sy - 29, sx + wx + 3, sy - 25],
+                       fill=(180, 210, 230))
+    # funnel, slanted, left of the bridge — right where the fire is
+    draw.polygon([(sx - 20, sy - 6), (sx - 12, sy - 6), (sx - 14, sy - 20),
+                  (sx - 22, sy - 20)], fill=(60, 60, 60))
+    draw.rectangle([sx - 22, sy - 22, sx - 14, sy - 20], fill=INK)
+    # LAYERED flames over the funnel/deck: red outer tongues, orange
+    # middle, yellow core — the fire reads as flames, not a blob
+    for cx, tip, hw, seed in [(-14, -58, 11, 231), (-32, -46, 8, 232),
+                               (4, -48, 8, 233)]:
+        _flame(draw, sx + cx, sy - 14, sy + tip, hw, (215, 50, 25), seed)
+    for cx, tip, hw, seed in [(-14, -48, 8, 234), (-28, -38, 6, 235),
+                               (0, -40, 6, 236)]:
+        _flame(draw, sx + cx, sy - 14, sy + tip, hw, (248, 140, 40), seed)
+    for cx, tip, hw, seed in [(-14, -38, 5, 237), (-22, -30, 4, 238),
+                               (-4, -32, 4, 239)]:
+        _flame(draw, sx + cx, sy - 14, sy + tip, hw, (255, 210, 80), seed)
+    # radar mast + antenna whip on the bridge top — drawn AFTER the
+    # flames so the mast silhouette still reads against the fire/sky
+    draw.line([(sx + 24, sy - 32), (sx + 24, sy - 46)], fill=INK, width=2)
+    draw.line([(sx + 16, sy - 46), (sx + 32, sy - 46)], fill=INK, width=2)
+    draw.line([(sx + 30, sy - 32), (sx + 30, sy - 42)], fill=INK, width=1)
     # waves under the hull (in the sea, just above the coast)
     for wy in (sy + 12, sy + 14):
         draw.line([(sx - 62, wy), (sx - 30, wy - 2), (sx, wy), (sx + 30, wy - 2),
@@ -844,15 +932,20 @@ def draw_house_chart(img, draw, x0, y0, w, h):
     draw.ellipse([fx + 5, fy + 3, fx + 7, fy + 5], fill=(255, 255, 255))
     draw.ellipse([fx + 11, fy + 3, fx + 13, fy + 5], fill=(255, 255, 255))
     draw.rectangle([fx + 2, fy, fx + 38, fy + 20], outline=INK)
-    # Capitol dome, BIG and detailed, top right. base_top = y0+66;
-    # the bar sits at y0+84, so the base (ends y0+76) just clears it.
-    cx = x0 + w - 46
+    # Capitol, BIG and real — v7 REDRAW: a proper dome (not a flat
+    # half-ellipse) with ribs, a wider colonnaded drum, a lantern with
+    # the Statue of Freedom on top, and two WINGS (Senate + House)
+    # stretching left and right with pediments, windows and a columned
+    # terrace base. Centred in the box (cx = x0+170) so the building
+    # reads as the Capitol, not a small dome in the corner. The bar
+    # sits at y0+84, so the terrace step (ends y0+80) just clears it.
+    cx = x0 + 170
     base_top = y0 + 66
-    # dome: smooth half-ellipse polygon (offsets from cx, base_top) —
-    # v5: subtle left-to-right gradient (bright white on the lit side,
-    # faintly shaded on the right) instead of a flat fill
-    dome = [(-30, -10), (-29, -18), (-24, -25), (-16, -30), (-9, -32),
-            (0, -32), (9, -32), (16, -30), (24, -25), (29, -18), (30, -10)]
+    # dome: a real dome silhouette — wide at the base, curving in to a
+    # small flat crown — v5 gradient (bright lit side, shaded right)
+    dome = [(-36, 0), (-35, -10), (-31, -20), (-24, -28), (-14, -33),
+            (-6, -35), (0, -35), (6, -35), (14, -33), (24, -28),
+            (31, -20), (35, -10), (36, 0)]
     dome_pts = [(cx + dx, base_top + dy) for dx, dy in dome]
     # v6: the dome outline is jittered 1px (seeded) and drawn as a
     # pen stroke — the dome stops looking stamped and starts looking
@@ -860,30 +953,58 @@ def draw_house_chart(img, draw, x0, y0, w, h):
     dome_pts = _jitter_pts(dome_pts, 1.0, 204)
     _poly_gradient(img, dome_pts, (255, 255, 255), (224, 229, 237), horizontal=True)
     _hand_outline(draw, dome_pts, INK, seed=224)
-    # ribs on the dome
-    for dx, top in [(-20, -28), (-10, -31), (0, -32), (10, -31), (20, -28)]:
-        draw.line([(cx + dx, base_top + top), (cx + dx, base_top - 11)],
+    # ribs on the dome, following the curve
+    for dx, top in [(-24, -28), (-12, -33), (0, -35), (12, -33), (24, -28)]:
+        draw.line([(cx + dx, base_top + top), (cx + dx, base_top - 1)],
                   fill=GREY, width=1)
-    # lantern + finial
-    draw.rectangle([cx - 6, base_top - 40, cx + 6, base_top - 32],
+    # drum: wider colonnade under the dome
+    draw.rectangle([cx - 26, base_top - 6, cx + 26, base_top],
                    fill=(255, 255, 255), outline=INK)
-    draw.ellipse([cx - 2, base_top - 42, cx + 2, base_top - 40], fill=INK)
-    # drum
-    draw.rectangle([cx - 22, base_top - 10, cx + 22, base_top],
+    for dx in (-22, -16, -10, -4, 2, 8, 14, 20):
+        draw.line([(cx + dx, base_top - 5), (cx + dx, base_top - 1)],
+                  fill=GREY, width=1)
+    # lantern + Statue of Freedom on top (a tiny figure: head + body,
+    # standing on the lantern's little cap)
+    draw.rectangle([cx - 5, base_top - 43, cx + 5, base_top - 35],
                    fill=(255, 255, 255), outline=INK)
+    draw.ellipse([cx - 5, base_top - 47, cx + 5, base_top - 43],
+                 fill=(255, 255, 255), outline=INK)
+    draw.ellipse([cx - 2, base_top - 54, cx + 2, base_top - 50], fill=INK)
+    draw.polygon([(cx - 3, base_top - 50), (cx + 3, base_top - 50),
+                  (cx + 1, base_top - 46), (cx - 1, base_top - 46)], fill=INK)
+    # wings (Senate left, House right): lower blocks with a triangular
+    # pediment in the middle of each, windows along the front. They
+    # start clear of the flag (flag ends x0+50, left wing starts
+    # cx-118 = x0+52) and stay below the flag's pole (y0+46).
+    for sgn in (-1, 1):
+        wx0 = cx + sgn * 36
+        wx1 = cx + sgn * 118
+        x_lo, x_hi = min(wx0, wx1), max(wx0, wx1)
+        draw.rectangle([x_lo, base_top - 6, x_hi, base_top],
+                       fill=(255, 255, 255), outline=INK)
+        # pediment triangle in the middle of the wing
+        px = cx + sgn * 77
+        draw.polygon([(px - 18, base_top - 6), (px + 18, base_top - 6),
+                      (px, base_top - 12)], fill=(255, 255, 255), outline=INK)
+        # windows along the wing front
+        for wx in range(int(x_lo) + 6, int(x_hi) - 4, 10):
+            draw.rectangle([wx, base_top - 4, wx + 4, base_top - 1],
+                           fill=(90, 90, 90))
     # v5: soft shadow under the base (drawn first so the opaque base
     # covers the overlap — only the fringe below shows)
-    _soft_shadow(img, [(cx - 42, base_top), (cx + 42, base_top),
-                       (cx + 42, base_top + 10), (cx - 42, base_top + 10)],
+    _soft_shadow(img, [(cx - 124, base_top), (cx + 124, base_top),
+                       (cx + 124, base_top + 10), (cx - 124, base_top + 10)],
                  offset=(2, 3), blur=3, alpha=45)
-    # base with columns
-    draw.rectangle([cx - 42, base_top, cx + 42, base_top + 10],
+    # terrace base with columns + a step below it
+    draw.rectangle([cx - 124, base_top, cx + 124, base_top + 10],
                    fill=(255, 255, 255), outline=INK)
-    for dx in (-32, -24, -16, -8, 0, 8, 16, 24, 32):
+    for dx in range(-116, 117, 8):
         draw.line([(cx + dx, base_top + 1), (cx + dx, base_top + 9)],
                   fill=GREY, width=1)
+    draw.rectangle([cx - 130, base_top + 10, cx + 130, base_top + 14],
+                   fill=(245, 245, 245), outline=INK)
     # two small gold stars flanking the dome
-    for sx, sy in [(cx - 62, base_top - 38), (cx + 44, base_top - 52)]:
+    for sx, sy in [(cx - 58, base_top - 36), (cx + 52, base_top - 44)]:
         draw.polygon([(sx, sy - 5), (sx + 2, sy - 1), (sx + 5, sy - 1),
                       (sx + 2, sy + 2), (sx + 3, sy + 6), (sx, sy + 3),
                       (sx - 3, sy + 6), (sx - 2, sy + 2), (sx - 5, sy - 1),
