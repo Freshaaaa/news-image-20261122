@@ -5,8 +5,8 @@ One image, 1024x1024, PIL only, fully deterministic (no network, no clock,
 no unseeded randomness). Writes entry.png next to this script.
 Layout follows the proven winner template: masthead -> UTC strip -> numbers
 strip -> 3 big illustrated leads -> 10 medium icon cards -> region bar ->
-world map "WHERE IT HAPPENED" -> "ALSO ON" 31 small stories -> DATE CHECK
--> HOW SURE -> footer. 44 stories, 9 regions, 19 fields.
+world map "WHERE IT HAPPENED" -> "ALSO ON" 23 small stories -> DATE CHECK
+-> HOW SURE -> footer. 36 stories, 9 regions, 19 fields.
 """
 import hashlib
 import os
@@ -148,39 +148,34 @@ MEDIUM = [
      "Reuters · ESA", "CONFIRMED", "planet"),
 ]
 
-# (num, place, headline, source) — 31 small stories, grouped by region
+# (num, place, headline, source) — 23 small stories, grouped by region.
+# v4: cut 8 least-significant stories (minor sports score, minor arrests,
+# small local protest, local transport disruption, animal birth, minor
+# resignation) to free ~44px for bigger lead illustrations.
 SMALL = [
     (14, "WASHINGTON", "Trump signs EO 14438: contractors must consult the White House.", "AP"),
-    (15, "SEATTLE", "ICE arrests 2 on an Alaska Airlines jet bridge at Sea-Tac.", "AP"),
-    (16, "WASHINGTON", "Trump confirms the FBI crime database was hacked.", "Reuters"),
-    (17, "SAN ANTONIO", "Wembanyama scores 50 in a Spurs win.", "NBA"),
-    (18, "ARIZONA", "SpaceX's $74bn AI campus stalls in a power-bill dispute (6,000 MW).", "Fortune"),
-    (19, "NEW YORK", "Anthropic's IPO sparks a Wall Street row over unusual deal limits.", "Reuters"),
-    (20, "BRAZIL", "Five arrested over 660 kg of cocaine linked to Australia.", "AP"),
-    (21, "ARGENTINA", "$50bn LNG project approved.", "Reuters"),
-    (22, "ARGENTINA", "Country risk hits 1,070, the highest of 2026.", "JPMorgan"),
-    (23, "GUATEMALA", "Mexican fugitive arrested; the US seeks extradition.", "AP"),
-    (24, "POLAND", "Kh-101 missile debris found at three sites.", "Reuters"),
-    (25, "LONDON", "Conservatives vow to scrap the UK–EU deal.", "Reuters"),
-    (26, "PARIS", "Sixth weekend of protests over the cost of living.", "AFP"),
-    (27, "BRUSSELS", "EU's Costa proposes €204bn in savings and a digital tax.", "Handelsblatt"),
-    (28, "BELGIUM", "Brussels airports cancel most Monday flights as controllers strike.", "Reuters"),
-    (29, "TEHRAN", "Trump dares Iran to break the US port blockade.", "AP"),
-    (30, "SITRA, BAHRAIN", "Iranian attack on a civilian industrial site causes a fire; 2 hurt.", "Reuters"),
-    (31, "STRAIT OF HORMUZ", "Iran hits three tankers; UKMTO reports a vessel incident.", "UKMTO"),
-    (32, "GAZA CITY", "Israeli strike on a food van kills 3.", "AP"),
-    (33, "BAYELSA, NIGERIA", "Death toll from a capsized mourners' boat rises to 26.", "Reuters"),
-    (34, "KHARTOUM", "Drones hit homes and a UN building in Khartoum.", "OCHA"),
-    (35, "ATLANTIC", "Migrant boat capsizes off Senegal; 39 dead.", "Reuters"),
-    (36, "OYO, CONGO", "Kenya and DR Congo restore full diplomatic ties at a summit.", "Reuters"),
-    (37, "ODISHA, INDIA", "Cyclone Akvan weakens to a depression; 300,000+ evacuated.", "IMD"),
-    (38, "KUNO, INDIA", "A cheetah gives birth to four cubs in the wild; population reaches 62.", "Reuters"),
-    (39, "SEOUL", "Education minister quits over an AI exam-cheating scandal.", "Reuters"),
-    (40, "BEIJING", "China–Japan ties worsen over Taiwan and critical minerals.", "Reuters"),
-    (41, "DHAKA", "Deadly protests over the exiled former leader.", "Reuters"),
-    (42, "COOK ISLANDS", "Cyclone Xavier weakens to Category 1; emergency status stays.", "MetService"),
-    (43, "GENEVA", "UN talks on AI weapons end with no binding rules.", "AFP"),
-    (44, "ORBIT", "Earth gains a 'mini-moon', 2026 QQ8, a 2-metre asteroid.", "CNN"),
+    (15, "WASHINGTON", "Trump confirms the FBI crime database was hacked.", "Reuters"),
+    (16, "ARIZONA", "SpaceX's $74bn AI campus stalls in a power-bill dispute (6,000 MW).", "Fortune"),
+    (17, "NEW YORK", "Anthropic's IPO sparks a Wall Street row over unusual deal limits.", "Reuters"),
+    (18, "ARGENTINA", "$50bn LNG project approved.", "Reuters"),
+    (19, "ARGENTINA", "Country risk hits 1,070, the highest of 2026.", "JPMorgan"),
+    (20, "POLAND", "Kh-101 missile debris found at three sites.", "Reuters"),
+    (21, "LONDON", "Conservatives vow to scrap the UK–EU deal.", "Reuters"),
+    (22, "BRUSSELS", "EU's Costa proposes €204bn in savings and a digital tax.", "Handelsblatt"),
+    (23, "TEHRAN", "Trump dares Iran to break the US port blockade.", "AP"),
+    (24, "SITRA, BAHRAIN", "Iranian attack on a civilian industrial site causes a fire; 2 hurt.", "Reuters"),
+    (25, "STRAIT OF HORMUZ", "Iran hits three tankers; UKMTO reports a vessel incident.", "UKMTO"),
+    (26, "GAZA CITY", "Israeli strike on a food van kills 3.", "AP"),
+    (27, "BAYELSA, NIGERIA", "Death toll from a capsized mourners' boat rises to 26.", "Reuters"),
+    (28, "KHARTOUM", "Drones hit homes and a UN building in Khartoum.", "OCHA"),
+    (29, "ATLANTIC", "Migrant boat capsizes off Senegal; 39 dead.", "Reuters"),
+    (30, "OYO, CONGO", "Kenya and DR Congo restore full diplomatic ties at a summit.", "Reuters"),
+    (31, "ODISHA, INDIA", "Cyclone Akvan weakens to a depression; 300,000+ evacuated.", "IMD"),
+    (32, "BEIJING", "China–Japan ties worsen over Taiwan and critical minerals.", "Reuters"),
+    (33, "DHAKA", "Deadly protests over the exiled former leader.", "Reuters"),
+    (34, "COOK ISLANDS", "Cyclone Xavier weakens to Category 1; emergency status stays.", "MetService"),
+    (35, "GENEVA", "UN talks on AI weapons end with no binding rules.", "AFP"),
+    (36, "ORBIT", "Earth gains a 'mini-moon', 2026 QQ8, a 2-metre asteroid.", "CNN"),
 ]
 
 UTC_STRIP = [
@@ -203,9 +198,9 @@ NUMBERS = [
 ]
 
 REGIONS = [
-    ("Europe", 9, (178, 28, 28)), ("N. America", 9, (30, 64, 140)),
-    ("Latin America", 6, (34, 110, 60)), ("Middle East", 5, (166, 110, 10)),
-    ("Africa", 5, (120, 72, 20)), ("Asia", 6, (140, 40, 120)),
+    ("Europe", 7, (178, 28, 28)), ("N. America", 7, (30, 64, 140)),
+    ("Latin America", 4, (34, 110, 60)), ("Middle East", 5, (166, 110, 10)),
+    ("Africa", 5, (120, 72, 20)), ("Asia", 4, (140, 40, 120)),
     ("Oceania", 1, (20, 120, 130)), ("Global", 3, (90, 86, 76)),
 ]
 
@@ -473,12 +468,12 @@ def draw_world_map(draw, x0, y0, w, h):
     draw.text((sx + 12, sy - 6), "13", font=f, fill=INK)
 
 
-def draw_turkiye(draw, x0, y0, w, h):
-    """Türkiye with a readable coastline: Black Sea north, Mediterranean
-    south with the Antalya bay, Aegean notches west. Istanbul + Ankara
-    marked, an OVERTIME clock top-right, and the draft-text box as a
-    single line at the bottom so the map (and the Antalya pin) stay
-    visible. Everything stays inside (x0, y0, w, h)."""
+def draw_turkiye(img, draw, x0, y0, w, h):
+    """Türkiye scene (130px box): a bigger, warmer map with Istanbul +
+    Ankara marked, an OVERTIME clock, the Antalya pin with its glow, and
+    a big rotated red "NO DEAL" stamp across the map — the scene reads as
+    "a conference that failed", not just a map. The draft-text box stays
+    as a single line at the bottom. Everything stays inside (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
     poly = [(0.03, 0.36), (0.05, 0.26), (0.08, 0.19), (0.15, 0.16),
             (0.25, 0.15), (0.35, 0.17), (0.45, 0.15), (0.55, 0.17),
@@ -493,20 +488,24 @@ def draw_turkiye(draw, x0, y0, w, h):
     draw.text((x0 + 6, y0 + 1), "TÜRKIYE", font=font(SANSB, 9), fill=INK)
     draw.text((x0 + 100, y0 + 1), "BLACK SEA", font=font(SANS, 7), fill=BLUE2)
     # OVERTIME clock, top right (in the Black Sea, clear of the land),
-    # with a warm glow halo so it pops
-    cx, cy = x0 + w - 14, y0 + 13
-    draw.ellipse([cx - 11, cy - 11, cx + 11, cy + 11], fill=(250, 200, 110))
-    draw.ellipse([cx - 7, cy - 7, cx + 7, cy + 7], fill=(255, 255, 255), outline=RED, width=2)
-    draw.line([(cx, cy), (cx, cy - 4)], fill=RED, width=1)
-    draw.line([(cx, cy), (cx + 3, cy + 1)], fill=RED, width=1)
-    draw.text((cx - 58, cy - 4), "OVERTIME", font=font(SANSB, 7), fill=RED)
-    # Istanbul (north-west) + Ankara (central) markers
+    # with a warm glow halo so it pops — bigger in the 130px box
+    cx, cy = x0 + w - 18, y0 + 16
+    draw.ellipse([cx - 14, cy - 14, cx + 14, cy + 14], fill=(250, 200, 110))
+    draw.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=(255, 255, 255), outline=RED, width=2)
+    draw.line([(cx, cy), (cx, cy - 6)], fill=RED, width=2)
+    draw.line([(cx, cy), (cx + 4, cy + 2)], fill=RED, width=2)
+    draw.text((cx - 62, cy - 4), "OVERTIME", font=font(SANSB, 7), fill=RED)
+    # Istanbul (north-west) + Ankara (central) markers; Ankara's label
+    # sits LEFT of its dot so the NO DEAL stamp (right of it) never
+    # touches it
     ix, iy = x0 + 0.16 * w, y0 + 0.26 * h
     draw.ellipse([ix - 3, iy - 3, ix + 3, iy + 3], fill=INK, outline=(255, 255, 255), width=1)
-    draw.text((ix + 5, iy - 4), "ISTANBUL", font=font(SANS, 6), fill=INK)
+    draw.text((ix + 5, iy - 4), "ISTANBUL", font=font(SANS, 7), fill=INK)
     kx, ky = x0 + 0.42 * w, y0 + 0.38 * h
     draw.ellipse([kx - 3, ky - 3, kx + 3, ky + 3], fill=INK, outline=(255, 255, 255), width=1)
-    draw.text((kx + 5, ky - 4), "ANKARA", font=font(SANS, 6), fill=INK)
+    lab = "ANKARA"
+    draw.text((kx - 5 - draw.textlength(lab, font=font(SANS, 7)), ky - 4), lab,
+              font=font(SANS, 7), fill=INK)
     # Antalya pin on the south coast, at the bay dip — with a warm glow
     # halo so it pops off the land
     ax, ay = x0 + 0.66 * w, y0 + 0.60 * h
@@ -515,6 +514,16 @@ def draw_turkiye(draw, x0, y0, w, h):
     draw.ellipse([ax - 5, ay - 5, ax + 5, ay + 5], fill=RED, outline=(255, 255, 255), width=1)
     draw.text((ax + 8, ay - 4), "ANTALYA", font=font(SANSB, 8), fill=RED)
     draw.text((x0 + 6, y0 + 0.72 * h), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
+    # NO DEAL stamp: bold red text on transparent, rotated, pasted over
+    # the eastern half of the map (clear of the clock, Istanbul, Ankara
+    # and the Antalya pin)
+    stamp = Image.new("RGBA", (140, 40), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(stamp)
+    sd.rectangle([2, 2, 137, 37], outline=RED, width=3)
+    sd.text((12, 8), "NO DEAL", font=font(SANSB, 20), fill=RED)
+    stamp = stamp.rotate(-13, expand=True, resample=Image.BICUBIC)
+    scx, scy = x0 + 0.65 * w, y0 + 0.30 * h
+    img.paste(stamp, (int(scx - stamp.width / 2), int(scy - stamp.height / 2)), stamp)
     # draft-text box: one line, bottom
     bx, by = x0 + 6, y0 + h - 14
     draw.rectangle([bx, by, x0 + w - 6, y0 + h - 3], fill=(255, 255, 255), outline=RED, width=1)
@@ -525,124 +534,152 @@ def draw_turkiye(draw, x0, y0, w, h):
 
 
 def draw_libya(draw, x0, y0, w, h):
-    """Libya / Mediterranean: sea on top, land below with the Gulf of
-    Sidra dip, a BIG burning warship offshore, a second smaller ship in
-    the distance, a burning port facility on the coast near Benghazi,
-    and a thick red SEA DRONE arrow. Everything stays inside the box
-    (x0, y0, w, h)."""
+    """Libya / Mediterranean SCENE (130px box): the sea fills the top
+    two-thirds, a BIG burning warship (120px hull) sits low in the sea
+    with a two-tier orange fire and five smoke puffs billowing up and
+    to the right, waves under the hull, a smaller ship in the distance,
+    a burning port facility on the coast near Benghazi, and a thick red
+    SEA DRONE arrow. At 300px the first thing seen is the burning ship.
+    Everything stays inside the box (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
-    # land: north coast with the Sidra gulf dip, extends past the bottom
-    poly = [(0.02, 0.48), (0.10, 0.44), (0.20, 0.42), (0.30, 0.44),
-            (0.40, 0.50), (0.48, 0.54), (0.55, 0.50), (0.62, 0.45),
-            (0.70, 0.42), (0.78, 0.40), (0.86, 0.42), (0.94, 0.44),
-            (0.98, 0.55), (0.98, 1.0), (0.0, 1.0), (0.0, 0.52)]
+    # land: north coast lower than v3 (more sea room for the ship +
+    # smoke), with the Sidra gulf dip; extends past the bottom
+    poly = [(0.02, 0.62), (0.10, 0.58), (0.20, 0.56), (0.30, 0.58),
+            (0.40, 0.64), (0.48, 0.68), (0.55, 0.64), (0.62, 0.59),
+            (0.70, 0.56), (0.78, 0.54), (0.86, 0.56), (0.94, 0.58),
+            (0.98, 0.68), (0.98, 1.0), (0.0, 1.0), (0.0, 0.66)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
     draw.polygon(pts, fill=LAND2, outline=INK)
     draw.text((x0 + 6, y0 + 2), "SEA DRONE", font=font(SANSB, 7), fill=RED)
     draw.text((x0 + w - 100, y0 + 2), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
-    draw.text((x0 + 8, y0 + 0.62 * h), "LIBYA", font=font(SANSB, 9), fill=INK)
-    # Benghazi pin on the north-east coast, label to its left
-    bx, by = x0 + 0.70 * w, y0 + 0.42 * h
+    draw.text((x0 + 8, y0 + 0.76 * h), "LIBYA", font=font(SANSB, 9), fill=INK)
+    # Benghazi pin on the north-east coast; label BELOW the pin, on the
+    # land (the ship's hull covers the strip left of the pin)
+    bx, by = x0 + 0.70 * w, y0 + 0.56 * h
     draw.ellipse([bx - 5, by - 5, bx + 5, by + 5], fill=RED, outline=(255, 255, 255), width=1)
-    draw.text((bx - 56, by - 4), "BENGHAZI", font=font(SANSB, 7), fill=RED)
-    # burning port facility on the coast, east of Benghazi — BIG fire
-    fx, fy = x0 + 0.82 * w, y0 + 0.47 * h
-    draw.ellipse([fx - 12, fy - 20, fx + 12, fy - 3], fill=(250, 195, 95))
-    draw.ellipse([fx - 5, fy - 22, fx + 2, fy - 16], fill=(120, 115, 105))
-    draw.ellipse([fx + 1, fy - 21, fx + 7, fy - 15], fill=(140, 135, 125))
-    draw.ellipse([fx - 9, fy - 17, fx + 9, fy - 4], fill=(240, 180, 40), outline=RED)
-    for dx, dy in [(-8, -20), (0, -22), (8, -19)]:
-        draw.line([(fx, fy - 5), (fx + dx, fy + dy)], fill=RED, width=3)
-    draw.rectangle([fx - 10, fy - 4, fx + 10, fy + 2], fill=(60, 60, 60))
+    lab = "BENGHAZI"
+    draw.text((bx - draw.textlength(lab, font=font(SANSB, 7)) / 2, by + 9), lab,
+              font=font(SANSB, 7), fill=RED)
+    # burning port facility on the coast, east of Benghazi
+    fx, fy = x0 + 0.84 * w, y0 + 0.58 * h
+    draw.ellipse([fx - 14, fy - 26, fx + 14, fy - 4], fill=(250, 195, 95))
+    draw.ellipse([fx - 6, fy - 28, fx + 2, fy - 20], fill=(120, 115, 105))
+    draw.ellipse([fx + 1, fy - 27, fx + 8, fy - 19], fill=(140, 135, 125))
+    draw.ellipse([fx - 11, fy - 21, fx + 11, fy - 5], fill=(240, 180, 40), outline=RED)
+    for dx, dy in [(-9, -25), (0, -27), (9, -24)]:
+        draw.line([(fx, fy - 6), (fx + dx, fy + dy)], fill=RED, width=3)
+    draw.rectangle([fx - 12, fy - 5, fx + 12, fy + 3], fill=(60, 60, 60))
     # second ship, small, in the distance (lower left of the sea)
-    sx2, sy2 = x0 + 0.14 * w, y0 + 0.30 * h
-    draw.polygon([(sx2 - 11, sy2), (sx2 + 11, sy2), (sx2 + 8, sy2 + 4),
-                  (sx2 - 8, sy2 + 4)], fill=(70, 70, 70))
-    draw.rectangle([sx2 - 6, sy2 - 5, sx2 + 6, sy2], fill=GREY)
-    draw.ellipse([sx2 - 2, sy2 - 10, sx2 + 2, sy2 - 6], fill=(150, 145, 135))
-    draw.line([(sx2 - 13, sy2 + 6), (sx2 + 13, sy2 + 6)], fill=BLUE2, width=1)
-    # BIG burning warship offshore, in the sea above the coast
-    sx, sy = x0 + 0.42 * w, y0 + 0.34 * h
-    # smoke puffs above the fire — 4 layers, thicker and darker
-    draw.ellipse([sx - 10, sy - 30, sx + 0, sy - 22], fill=(100, 95, 85))
-    draw.ellipse([sx + 0, sy - 29, sx + 10, sy - 21], fill=(120, 115, 105))
-    draw.ellipse([sx - 5, sy - 32, sx + 4, sy - 25], fill=(140, 135, 125))
-    draw.ellipse([sx + 4, sy - 31, sx + 11, sy - 25], fill=(160, 155, 145))
-    # orange glow halo around the fire, then the fire itself (2x wider)
-    draw.ellipse([sx - 19, sy - 27, sx + 19, sy - 8], fill=(250, 195, 95))
-    draw.ellipse([sx - 16, sy - 25, sx + 16, sy - 9], fill=(248, 160, 55))
-    draw.ellipse([sx - 14, sy - 24, sx + 14, sy - 10], fill=(240, 180, 40), outline=RED)
-    draw.ellipse([sx - 7, sy - 19, sx + 7, sy - 10], fill=(255, 215, 90))
-    for dx, dy in [(-11, -28), (0, -31), (11, -27)]:
-        draw.line([(sx, sy - 12), (sx + dx, sy + dy)], fill=RED, width=3)
+    sx2, sy2 = x0 + 0.13 * w, y0 + 0.24 * h
+    draw.polygon([(sx2 - 13, sy2), (sx2 + 13, sy2), (sx2 + 9, sy2 + 5),
+                  (sx2 - 9, sy2 + 5)], fill=(70, 70, 70))
+    draw.rectangle([sx2 - 7, sy2 - 6, sx2 + 7, sy2], fill=GREY)
+    draw.ellipse([sx2 - 2, sy2 - 12, sx2 + 2, sy2 - 7], fill=(150, 145, 135))
+    draw.line([(sx2 - 15, sy2 + 7), (sx2 + 15, sy2 + 7)], fill=BLUE2, width=1)
+    # BIG burning warship, low in the sea (waterline just above the coast)
+    sx, sy = x0 + 0.40 * w, y0 + 0.52 * h
+    # smoke: 5 puffs billowing up and to the right (wind), above the fire
+    draw.ellipse([sx - 20, sy - 62, sx - 2, sy - 46], fill=(100, 95, 85))
+    draw.ellipse([sx - 6, sy - 64, sx + 12, sy - 48], fill=(120, 115, 105))
+    draw.ellipse([sx + 6, sy - 66, sx + 24, sy - 50], fill=(140, 135, 125))
+    draw.ellipse([sx + 16, sy - 64, sx + 34, sy - 50], fill=(160, 155, 145))
+    draw.ellipse([sx + 26, sy - 60, sx + 42, sy - 48], fill=(150, 145, 135))
+    # fire: two-tier orange glow + bright core + tall red flame tongues
+    draw.ellipse([sx - 44, sy - 54, sx + 44, sy - 16], fill=(250, 195, 95))
+    draw.ellipse([sx - 38, sy - 50, sx + 38, sy - 18], fill=(248, 160, 55))
+    draw.ellipse([sx - 32, sy - 48, sx + 32, sy - 20], fill=(240, 180, 40), outline=RED)
+    draw.ellipse([sx - 15, sy - 40, sx + 15, sy - 22], fill=(255, 215, 90))
+    for dx, dy in [(-26, -52), (0, -56), (26, -50)]:
+        draw.line([(sx, sy - 24), (sx + dx, sy + dy)], fill=RED, width=4)
     # superstructure + funnel + mast
-    draw.rectangle([sx - 14, sy - 12, sx + 14, sy - 4], fill=GREY)
-    draw.rectangle([sx - 19, sy - 10, sx - 11, sy - 4], fill=(60, 60, 60))
-    draw.line([(sx + 8, sy - 12), (sx + 8, sy - 20)], fill=INK, width=2)
-    # hull: dark, wider than tall (bigger than v2)
-    draw.polygon([(sx - 27, sy - 4), (sx + 27, sy - 4), (sx + 19, sy + 8),
-                  (sx - 19, sy + 8)], fill=INK)
-    draw.line([(sx - 27, sy - 4), (sx + 27, sy - 4)], fill=(255, 255, 255), width=1)
-    # waves under the hull
-    for wy in (sy + 10, sy + 13):
-        draw.line([(sx - 28, wy), (sx - 14, wy - 2), (sx, wy), (sx + 14, wy - 2),
-                   (sx + 28, wy)], fill=BLUE2, width=1)
+    draw.rectangle([sx - 28, sy - 20, sx + 28, sy - 6], fill=GREY)
+    draw.rectangle([sx - 42, sy - 16, sx - 30, sy - 6], fill=(60, 60, 60))
+    draw.line([(sx + 22, sy - 20), (sx + 22, sy - 36)], fill=INK, width=2)
+    # hull: dark, 120px wide
+    draw.polygon([(sx - 60, sy - 6), (sx + 60, sy - 6), (sx + 48, sy + 10),
+                  (sx - 48, sy + 10)], fill=INK)
+    draw.line([(sx - 60, sy - 6), (sx + 60, sy - 6)], fill=(255, 255, 255), width=1)
+    # waves under the hull (in the sea, just above the coast)
+    for wy in (sy + 12, sy + 14):
+        draw.line([(sx - 62, wy), (sx - 30, wy - 2), (sx, wy), (sx + 30, wy - 2),
+                   (sx + 62, wy)], fill=BLUE2, width=1)
     # thick red arrow: drone path to the ship, from the upper left
-    draw.line([(x0 + 30, y0 + 10), (sx - 27, sy - 10)], fill=RED, width=3)
-    draw.polygon([(sx - 27, sy - 10), (sx - 37, sy - 15), (sx - 33, sy - 3)], fill=RED)
+    draw.line([(x0 + 30, y0 + 10), (sx - 62, sy - 8)], fill=RED, width=4)
+    draw.polygon([(sx - 62, sy - 8), (sx - 74, sy - 14), (sx - 70, sy)], fill=RED)
 
 
 def draw_house_chart(draw, x0, y0, w, h):
-    """US House seats: 258 Dem (blue) vs 177 Rep (red), stacked bar + a
-    BIG detailed Capitol (ribbed dome, lantern, columned base) and a small
-    US flag. Everything stays inside the box (x0, y0, w, h)."""
+    """US House seats (130px box): 258 Dem (blue) vs 177 Rep (red),
+    stacked bar + a BIG detailed Capitol (ribbed dome, lantern, columned
+    base) and a small US flag — plus victory confetti dots and two gold
+    stars scattered in the empty space, so the scene reads as a win.
+    Everything stays inside the box (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
     draw.text((x0 + 6, y0 + 3), "US HOUSE  ·  435 SEATS", font=font(SANSB, 9), fill=INK)
     # small US flag, top left under the title
     fx, fy = x0 + 12, y0 + 20
-    draw.line([(fx, fy), (fx, fy + 22)], fill=INK, width=2)
+    draw.line([(fx, fy), (fx, fy + 26)], fill=INK, width=2)
     for i, c in enumerate([RED, (255, 255, 255), RED, (255, 255, 255)]):
-        draw.rectangle([fx + 2, fy + i * 4, fx + 32, fy + (i + 1) * 4], fill=c)
-    draw.rectangle([fx + 2, fy, fx + 14, fy + 8], fill=BLUE)
+        draw.rectangle([fx + 2, fy + i * 5, fx + 38, fy + (i + 1) * 5], fill=c)
+    draw.rectangle([fx + 2, fy, fx + 17, fy + 10], fill=BLUE)
     draw.ellipse([fx + 5, fy + 3, fx + 7, fy + 5], fill=(255, 255, 255))
-    draw.ellipse([fx + 9, fy + 3, fx + 11, fy + 5], fill=(255, 255, 255))
-    draw.rectangle([fx + 2, fy, fx + 32, fy + 16], outline=INK)
-    # Capitol dome, BIG and detailed, top right. base_top = y0+48;
-    # the bar sits at y0+58, so the base (ends y0+56) just clears it.
-    cx = x0 + w - 40
-    base_top = y0 + 48
+    draw.ellipse([fx + 11, fy + 3, fx + 13, fy + 5], fill=(255, 255, 255))
+    draw.rectangle([fx + 2, fy, fx + 38, fy + 20], outline=INK)
+    # Capitol dome, BIG and detailed, top right. base_top = y0+66;
+    # the bar sits at y0+84, so the base (ends y0+76) just clears it.
+    cx = x0 + w - 46
+    base_top = y0 + 66
     # dome: smooth half-ellipse polygon (offsets from cx, base_top)
-    dome = [(-24, -8), (-23, -14), (-19, -20), (-13, -24), (-7, -26),
-            (0, -26), (7, -26), (13, -24), (19, -20), (23, -14), (24, -8)]
+    dome = [(-30, -10), (-29, -18), (-24, -25), (-16, -30), (-9, -32),
+            (0, -32), (9, -32), (16, -30), (24, -25), (29, -18), (30, -10)]
     draw.polygon([(cx + dx, base_top + dy) for dx, dy in dome],
                  fill=(255, 255, 255), outline=INK)
     # ribs on the dome
-    for dx, top in [(-16, -23), (-8, -25), (0, -26), (8, -25), (16, -23)]:
-        draw.line([(cx + dx, base_top + top), (cx + dx, base_top - 9)],
+    for dx, top in [(-20, -28), (-10, -31), (0, -32), (10, -31), (20, -28)]:
+        draw.line([(cx + dx, base_top + top), (cx + dx, base_top - 11)],
                   fill=GREY, width=1)
     # lantern + finial
-    draw.rectangle([cx - 5, base_top - 32, cx + 5, base_top - 26],
+    draw.rectangle([cx - 6, base_top - 40, cx + 6, base_top - 32],
                    fill=(255, 255, 255), outline=INK)
-    draw.ellipse([cx - 2, base_top - 34, cx + 2, base_top - 32], fill=INK)
+    draw.ellipse([cx - 2, base_top - 42, cx + 2, base_top - 40], fill=INK)
     # drum
-    draw.rectangle([cx - 18, base_top - 8, cx + 18, base_top],
+    draw.rectangle([cx - 22, base_top - 10, cx + 22, base_top],
                    fill=(255, 255, 255), outline=INK)
     # base with columns
-    draw.rectangle([cx - 34, base_top, cx + 34, base_top + 8],
+    draw.rectangle([cx - 42, base_top, cx + 42, base_top + 10],
                    fill=(255, 255, 255), outline=INK)
-    for dx in (-28, -21, -14, -7, 0, 7, 14, 21, 28):
-        draw.line([(cx + dx, base_top + 1), (cx + dx, base_top + 7)],
+    for dx in (-32, -24, -16, -8, 0, 8, 16, 24, 32):
+        draw.line([(cx + dx, base_top + 1), (cx + dx, base_top + 9)],
                   fill=GREY, width=1)
+    # two small gold stars flanking the dome
+    for sx, sy in [(cx - 62, base_top - 38), (cx + 44, base_top - 52)]:
+        draw.polygon([(sx, sy - 5), (sx + 2, sy - 1), (sx + 5, sy - 1),
+                      (sx + 2, sy + 2), (sx + 3, sy + 6), (sx, sy + 3),
+                      (sx - 3, sy + 6), (sx - 2, sy + 2), (sx - 5, sy - 1),
+                      (sx - 2, sy - 1)], fill=GOLD, outline=INK)
+    # victory confetti: fixed dots (red/blue/gold) in the empty space —
+    # left of the dome, below the flag, and under the bar. Hardcoded,
+    # so the render stays deterministic.
+    confetti = [
+        (60, 58, RED), (76, 68, BLUE), (92, 55, GOLD), (56, 75, BLUE),
+        (102, 78, RED), (72, 82, GOLD), (122, 62, BLUE), (142, 72, RED),
+        (162, 58, GOLD), (182, 78, BLUE), (206, 60, RED), (222, 76, GOLD),
+        (20, 122, BLUE), (60, 124, RED), (100, 122, GOLD), (150, 125, BLUE),
+        (180, 123, RED), (230, 121, GOLD), (270, 125, BLUE), (296, 120, RED),
+        (250, 124, GOLD), (120, 126, BLUE),
+    ]
+    for px, py, col in confetti:
+        draw.ellipse([x0 + px - 2, y0 + py - 2, x0 + px + 2, y0 + py + 2], fill=col)
     # stacked bar
-    bx, by, bw, bh = x0 + 10, y0 + 58, w - 20, 18
+    bx, by, bw, bh = x0 + 10, y0 + 84, w - 20, 20
     dem_w = bw * 258 / 435
     draw.rectangle([bx, by, bx + dem_w, by + bh], fill=BLUE)
     draw.rectangle([bx + dem_w, by, bx + bw, by + bh], fill=RED)
     draw.rectangle([bx, by, bx + bw, by + bh], outline=INK, width=1)
     f = font(SANSB, 9)
-    draw.text((bx + 5, by + 4), "258 DEM", font=f, fill=(255, 255, 255))
+    draw.text((bx + 5, by + 5), "258 DEM", font=f, fill=(255, 255, 255))
     t = "177 REP"
-    draw.text((bx + bw - draw.textlength(t, font=f) - 5, by + 4), t, font=f,
+    draw.text((bx + bw - draw.textlength(t, font=f) - 5, by + 5), t, font=f,
               fill=(255, 255, 255))
     draw.text((x0 + 10, by + bh + 4), "LARGEST MAJORITY SINCE 1992",
               font=font(SANSB, 9), fill=RED)
@@ -663,7 +700,7 @@ def render():
     t2 = "THE WORLD ON A SUNDAY"
     d.text((RX - tw(d, t2, font(SANS, 9)), y + 22), t2, font=font(SANS, 9), fill=GREY)
     y = 54
-    d.text((MX, y), "44 STORIES  ·  9 REGIONS  ·  19 FIELDS  ·  ALL FROM THIS SUNDAY",
+    d.text((MX, y), "36 STORIES  ·  9 REGIONS  ·  19 FIELDS  ·  ALL FROM THIS SUNDAY",
            font=font(SANSB, 12), fill=INK)
     y = 72
     rule(d, MX, RX, y, INK, 2)
@@ -689,9 +726,9 @@ def render():
         d.text((x, y + 15), num, font=font(SERIFB, 17), fill=INK)
         para(d, x, y + 33, txt, font(SANS, 8), GREY, col_w - 6, lh=9, max_lines=2)
 
-    # ---- 3 big leads (illustration boxes now 96px tall) ----
+    # ---- 3 big leads (illustration boxes now 130px tall) ----
     y = 177
-    lead_h = 212
+    lead_h = 246
     col_w = (RX - MX - 12) / 3.0
     for i, (num, kick, head, deck, src, conf) in enumerate(LEADS):
         x = MX + i * (col_w + 6)
@@ -702,10 +739,10 @@ def render():
         yy = y + 48
         para(d, x + 6, yy, deck, font(SANS, 10), INK, col_w - 12, lh=12, max_lines=3)
         # illustration
-        ih = 96
+        ih = 130
         iy = y + lead_h - ih - 22
         if num == 1:
-            draw_turkiye(d, x + 6, iy, col_w - 12, ih)
+            draw_turkiye(img, d, x + 6, iy, col_w - 12, ih)
         elif num == 2:
             draw_libya(d, x + 6, iy, col_w - 12, ih)
         else:
@@ -715,8 +752,9 @@ def render():
         d.text((x + 6, sy + 2), src, font=font(SANS, 8), fill=GREY)
         badge(d, x + col_w - 62, sy, conf)
 
-    # ---- 10 medium cards, 2 rows of 5 (compressed to 74px) ----
-    y = 395
+    # ---- 10 medium cards, 2 rows of 5 (74px; NOT compressed in v4 —
+    # the ALSO ON cut alone pays for the bigger leads) ----
+    y = 429
     card_w = (RX - MX - 16) / 5.0
     card_h = 74
     for row in range(2):
@@ -740,7 +778,7 @@ def render():
             badge(d, x + card_w - 60, sy, conf)
 
     # ---- STORIES BY REGION (single 14px row: label + bar + legend) ----
-    y = 552
+    y = 586
     d.text((MX, y + 3), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
     bx = MX + 118
     total = sum(n for _, n, _ in REGIONS)
@@ -754,25 +792,25 @@ def render():
         x += wseg
     d.text((bx + bar_w + 8, y + 3), legend, font=font(SANS, 8), fill=INK)
 
-    # ---- WHERE IT HAPPENED (taller strip: 150px, Europe breathes) ----
-    y = 570
+    # ---- WHERE IT HAPPENED (taller strip: 160px, Europe breathes) ----
+    y = 604
     d.text((MX, y), "WHERE IT HAPPENED  ·  PINS 1–13  (13 = IN ORBIT)",
            font=font(SANSB, 10), fill=INK)
-    draw_world_map(d, MX, y + 15, RX - MX, 150)
+    draw_world_map(d, MX, y + 15, RX - MX, 160)
 
     # ---- ALSO ON ----
-    y = 741
-    d.text((MX, y), "ALSO ON SUNDAY 22 NOVEMBER — 31 MORE STORIES",
+    y = 785
+    d.text((MX, y), "ALSO ON SUNDAY 22 NOVEMBER — 23 MORE STORIES",
            font=font(SANSB, 10), fill=INK)
     rule(d, MX, RX, y + 15, INK, 1)
-    y = 761
+    y = 805
     col_w = (RX - MX - 12) / 2.0
     row_h = 11
     f_head = font(SANS, 9)
     f_bold = font(SANSB, 9)
     f_src = font(SANS, 7)
-    left = SMALL[:16]
-    right = SMALL[16:]
+    left = SMALL[:12]
+    right = SMALL[12:]
     max_y = y
     for ci, group in enumerate((left, right)):
         x = MX + ci * (col_w + 12)
