@@ -9,6 +9,7 @@ world map "WHERE IT HAPPENED" -> "ALSO ON" 23 small stories -> DATE CHECK
 -> HOW SURE -> footer. 36 stories, 9 regions, 19 fields.
 """
 import hashlib
+import math
 import os
 import random
 import sys
@@ -414,87 +415,275 @@ PIN_OFFSETS = {1: (16, 12), 2: (-18, 12), 3: (-13, 11), 4: (13, -13),
 
 # ---------------------------------------------------------------- icons
 def icon(draw, kind, cx, cy, s, col=INK):
-    """Small pictogram centred at (cx, cy), size s."""
+    """Mini-scene (v9): a small detailed illustration centred at
+    (cx, cy), size s (~40px) — a few BIG, THICK elements, because
+    small details do not read at 300px. Everything stays inside
+    cx-19..cx+19, cy-21..cy+24 so it never touches the kicker above,
+    the headline/deck to the right, or the source line below."""
     if kind == "blast":
-        # building + explosion star
-        draw.rectangle([cx - s * 0.32, cy - s * 0.1, cx + s * 0.1, cy + s * 0.42], fill=col)
-        draw.rectangle([cx + s * 0.14, cy + s * 0.05, cx + s * 0.4, cy + s * 0.42], fill=(70, 70, 70))
-        for dx, dy in [(-0.5, -0.45), (-0.1, -0.5), (0.35, -0.48), (0.55, -0.3),
-                       (-0.55, -0.25), (0.1, -0.35)]:
-            draw.line([(cx, cy - s * 0.2), (cx + dx * s, cy + dy * s)], fill=RED, width=3)
-        draw.ellipse([cx - s * 0.14, cy - s * 0.42, cx + s * 0.14, cy - s * 0.14],
-                     fill=(240, 180, 40), outline=RED)
-    elif kind == "ship":
-        draw.polygon([(cx - s * 0.45, cy + s * 0.25), (cx + s * 0.45, cy + s * 0.25),
-                      (cx + s * 0.3, cy + s * 0.42), (cx - s * 0.3, cy + s * 0.42)], fill=col)
-        draw.rectangle([cx - s * 0.2, cy - s * 0.05, cx + s * 0.2, cy + s * 0.25], fill=(60, 60, 60))
-        draw.line([(cx, cy - s * 0.45), (cx, cy - s * 0.05)], fill=col, width=3)
-        draw.polygon([(cx, cy - s * 0.45), (cx + s * 0.3, cy - s * 0.32),
-                      (cx, cy - s * 0.2)], fill=RED)
-        draw.line([(cx - s * 0.45, cy + s * 0.5), (cx + s * 0.45, cy + s * 0.5)],
-                  fill=BLUE2, width=3)
-    elif kind == "missile":
-        draw.polygon([(cx, cy - s * 0.5), (cx + s * 0.14, cy - s * 0.2),
-                      (cx + s * 0.14, cy + s * 0.25), (cx - s * 0.14, cy + s * 0.25),
-                      (cx - s * 0.14, cy - s * 0.2)], fill=col)
-        draw.polygon([(cx - s * 0.14, cy + s * 0.25), (cx - s * 0.3, cy + s * 0.45),
-                      (cx, cy + s * 0.3)], fill=RED)
-        draw.polygon([(cx + s * 0.14, cy + s * 0.25), (cx + s * 0.3, cy + s * 0.45),
-                      (cx, cy + s * 0.3)], fill=RED)
-    elif kind == "chart":
-        pts = [(cx - s * 0.45, cy + s * 0.1), (cx - s * 0.2, cy - s * 0.15),
-               (cx, cy + s * 0.05), (cx + s * 0.2, cy - s * 0.2),
-               (cx + s * 0.45, cy + s * 0.35)]
-        # v7: 1px seeded jitter so the line reads hand-drawn, not ruler
-        pts = _jitter_pts(pts, 1.0, 501)
-        draw.line(pts, fill=RED, width=4, joint="curve")
-        draw.polygon([(cx + s * 0.45, cy + s * 0.35), (cx + s * 0.45, cy + s * 0.2),
-                      (cx + s * 0.3, cy + s * 0.35)], fill=RED)
-        draw.line([(cx - s * 0.5, cy + s * 0.45), (cx + s * 0.5, cy + s * 0.45)],
-                  fill=GREY, width=2)
-    elif kind == "flag":
-        draw.line([(cx - s * 0.3, cy - s * 0.45), (cx - s * 0.3, cy + s * 0.45)],
-                  fill=col, width=3)
-        for i, c in enumerate([INK, (255, 255, 255), INK, (255, 255, 255)]):
-            draw.rectangle([cx - s * 0.3, cy - s * 0.45 + i * s * 0.18,
-                            cx + s * 0.4, cy - s * 0.45 + (i + 1) * s * 0.18], fill=c)
-        draw.rectangle([cx - s * 0.3, cy - s * 0.45, cx + s * 0.4, cy + s * 0.27],
+        # --- damaged apartment block: two towers, broken roof,
+        # cracked windows, smoke, a small drone overhead
+        # left tower (taller, broken jagged top)
+        draw.polygon([(cx - 18, cy - 2), (cx - 14, cy - 9), (cx - 10, cy - 4),
+                      (cx - 6, cy - 11), (cx - 2, cy - 3), (cx - 2, cy + 20),
+                      (cx - 18, cy + 20)], fill=(70, 70, 70), outline=INK)
+        # right tower (shorter, flat roof)
+        draw.rectangle([cx + 2, cy + 6, cx + 18, cy + 20], fill=(110, 110, 110),
                        outline=INK)
-    elif kind == "quake":
-        pts = [(cx - s * 0.5, cy), (cx - s * 0.3, cy - s * 0.3), (cx - s * 0.12, cy + s * 0.25),
-               (cx + s * 0.05, cy - s * 0.35), (cx + s * 0.22, cy + s * 0.2),
-               (cx + s * 0.4, cy - s * 0.1), (cx + s * 0.5, cy)]
-        # v7: 1px seeded jitter so the zigzag reads hand-drawn
-        pts = _jitter_pts(pts, 1.0, 502)
+        # windows: lit (yellow) and broken (black)
+        for wx, wy, lit in [(-15, 0, True), (-8, 0, False), (-15, 8, False),
+                            (-8, 8, True), (-15, 15, True), (-8, 15, False),
+                            (5, 10, True), (12, 10, False), (5, 16, False),
+                            (12, 16, True)]:
+            c = (240, 180, 40) if lit else (20, 20, 20)
+            draw.rectangle([cx + wx, cy + wy, cx + wx + 4, cy + wy + 5], fill=c)
+        # crack down the left tower face
+        draw.line([(cx - 12, cy - 4), (cx - 9, cy + 4), (cx - 13, cy + 10),
+                   (cx - 10, cy + 18)], fill=RED, width=2)
+        # smoke puffs from the broken roof
+        draw.ellipse([cx - 14, cy - 18, cx - 4, cy - 10], fill=(150, 145, 135))
+        draw.ellipse([cx - 8, cy - 20, cx + 1, cy - 13], fill=(172, 167, 157))
+        # drone overhead, top right
+        draw.rectangle([cx + 11, cy - 17, cx + 17, cy - 14], fill=INK)
+        draw.line([(cx + 8, cy - 18), (cx + 20, cy - 18)], fill=INK, width=2)
+        draw.line([(cx + 8, cy - 13), (cx + 20, cy - 13)], fill=INK, width=2)
+        draw.line([(cx + 14, cy - 13), (cx + 14, cy - 10)], fill=RED, width=2)
+        # ground line
+        draw.line([(cx - 19, cy + 20), (cx + 19, cy + 20)], fill=INK, width=2)
+    elif kind == "ship":
+        # --- burning ship towed by a tug: hull with pointed bow,
+        # superstructure, layered fire + smoke, tow line to a tug
+        # sea
+        for wy in (cy + 17, cy + 20):
+            draw.line([(cx - 19, wy), (cx - 8, wy - 2), (cx + 2, wy),
+                       (cx + 12, wy - 2), (cx + 19, wy)], fill=BLUE2, width=1)
+        # smoke above the fire
+        draw.ellipse([cx - 12, cy - 20, cx - 2, cy - 12], fill=(150, 145, 135))
+        draw.ellipse([cx - 4, cy - 20, cx + 6, cy - 13], fill=(172, 167, 157))
+        # superstructure + funnel (drawn first; flames sit on top)
+        draw.rectangle([cx - 8, cy - 2, cx + 2, cy + 6], fill=(90, 90, 90),
+                       outline=INK, width=1)
+        draw.rectangle([cx - 6, cy - 6, cx - 2, cy - 2], fill=(60, 60, 60))
+        # hull: pointed bow right, flat stern left
+        draw.polygon([(cx - 18, cy + 6), (cx + 8, cy + 6), (cx + 14, cy + 10),
+                      (cx + 8, cy + 14), (cx - 16, cy + 14)], fill=INK)
+        draw.line([(cx - 18, cy + 6), (cx + 8, cy + 6)], fill=(255, 255, 255),
+                  width=2)
+        # portholes
+        for px in (-12, -4, 4):
+            draw.ellipse([cx + px - 2, cy + 9, cx + px + 2, cy + 13],
+                         fill=(235, 235, 228))
+        # layered fire over the superstructure
+        _flame(draw, cx - 4, cy - 2, cy - 16, 6, (215, 50, 25), 601)
+        _flame(draw, cx - 2, cy - 2, cy - 13, 5, (248, 140, 40), 602)
+        _flame(draw, cx - 1, cy - 2, cy - 10, 3, (255, 210, 80), 603)
+        # tow line from the stern down to the tug
+        draw.line([(cx - 17, cy + 8), (cx - 13, cy + 16)], fill=(90, 90, 90),
+                  width=2)
+        # tug, bottom left
+        draw.polygon([(cx - 19, cy + 18), (cx - 8, cy + 18), (cx - 10, cy + 22),
+                      (cx - 17, cy + 22)], fill=(70, 70, 70))
+        draw.rectangle([cx - 16, cy + 14, cx - 11, cy + 18], fill=(110, 110, 110),
+                       outline=INK)
+    elif kind == "missile":
+        # --- missile battery: launcher truck + 3 missiles climbing
+        # away on smoke trails
+        # launcher truck, bottom left
+        draw.rectangle([cx - 18, cy + 13, cx - 2, cy + 19], fill=(70, 70, 70),
+                       outline=INK)
+        draw.ellipse([cx - 15, cy + 19, cx - 11, cy + 23], fill=INK)
+        draw.ellipse([cx - 7, cy + 19, cx - 3, cy + 23], fill=INK)
+        # angled launch rail
+        draw.line([(cx - 14, cy + 13), (cx - 6, cy - 2)], fill=INK, width=3)
+        # 3 missiles climbing at different heights, each on a trail
+        for ox, oy in [(-8, -8), (2, -12), (11, -5)]:
+            mx, my = cx + ox, cy + oy
+            # smoke trail curving down from the tail
+            draw.line([(mx - 2, my + 8), (mx - 4, my + 14), (mx - 2, my + 20)],
+                      fill=(190, 185, 175), width=3)
+            # flame at the tail
+            draw.polygon([(mx - 3, my + 7), (mx + 3, my + 7), (mx, my + 12)],
+                         fill=(248, 140, 40))
+            # body + nose + fins
+            draw.polygon([(mx - 2, my + 7), (mx + 2, my + 7), (mx + 2, my - 4),
+                          (mx, my - 8), (mx - 2, my - 4)], fill=INK)
+            draw.polygon([(mx - 2, my + 5), (mx - 5, my + 9), (mx - 2, my + 7)],
+                         fill=RED)
+            draw.polygon([(mx + 2, my + 5), (mx + 5, my + 9), (mx + 2, my + 7)],
+                         fill=RED)
+    elif kind == "chart":
+        # --- falling market: descending red candlesticks under a
+        # thick red down-trend line with a big arrowhead
+        # axes
+        draw.line([(cx - 18, cy - 14), (cx - 18, cy + 18)], fill=GREY, width=2)
+        draw.line([(cx - 18, cy + 18), (cx + 18, cy + 18)], fill=GREY, width=2)
+        # 4 descending candlesticks (red bodies + wicks)
+        for bx, top, bot in [(-14, -8, 0), (-6, -4, 4), (2, 0, 8), (10, 4, 12)]:
+            draw.line([(cx + bx + 2, cy + top - 3), (cx + bx + 2, cy + bot + 3)],
+                      fill=INK, width=1)
+            draw.rectangle([cx + bx, cy + top, cx + bx + 5, cy + bot],
+                           fill=RED, outline=INK)
+        # thick red trend line over the candle tops
+        pts = [(cx - 16, cy - 10), (cx - 8, cy - 6), (cx, cy - 1),
+               (cx + 8, cy + 4), (cx + 15, cy + 10)]
+        pts = _jitter_pts(pts, 1.0, 601)
         draw.line(pts, fill=RED, width=3, joint="curve")
-        draw.line([(cx - s * 0.5, cy + s * 0.4), (cx + s * 0.5, cy + s * 0.4)],
-                  fill=GREY, width=2)
+        # big down arrowhead at the end of the trend line
+        draw.polygon([(cx + 17, cy + 13), (cx + 9, cy + 7), (cx + 12, cy + 16)],
+                     fill=RED)
+    elif kind == "flag":
+        # --- F1 car at speed under a checkered flag
+        # checkered flag, top right: pole + 3x2 checker panel
+        draw.line([(cx + 16, cy - 20), (cx + 16, cy - 2)], fill=INK, width=2)
+        for r in range(2):
+            for c in range(3):
+                colr = INK if (r + c) % 2 == 0 else (255, 255, 255)
+                draw.rectangle([cx + 4 + c * 4, cy - 20 + r * 4,
+                                cx + 8 + c * 4, cy - 16 + r * 4], fill=colr)
+        draw.rectangle([cx + 4, cy - 20, cx + 16, cy - 12], outline=INK)
+        # track
+        draw.line([(cx - 19, cy + 19), (cx + 19, cy + 19)], fill=GREY, width=2)
+        # F1 car, side profile facing right: low red body, big rear
+        # wing, nose + front wing, two fat wheels, driver helmet
+        draw.polygon([(cx - 18, cy + 8), (cx - 10, cy + 6), (cx + 2, cy + 6),
+                      (cx + 10, cy + 9), (cx + 14, cy + 12), (cx + 14, cy + 14),
+                      (cx - 18, cy + 14)], fill=RED, outline=INK)
+        # rear wing
+        draw.rectangle([cx - 18, cy - 1, cx - 15, cy + 8], fill=INK)
+        draw.rectangle([cx - 19, cy - 1, cx - 13, cy + 1], fill=INK)
+        # front wing
+        draw.rectangle([cx + 12, cy + 12, cx + 18, cy + 15], fill=INK)
+        # driver helmet
+        draw.ellipse([cx - 4, cy + 1, cx + 1, cy + 6], fill=(255, 255, 255),
+                     outline=INK)
+        # wheels: fat black tyres with grey hubs
+        for wx in (-10, 8):
+            draw.ellipse([cx + wx - 5, cy + 11, cx + wx + 5, cy + 21],
+                         fill=INK)
+            draw.ellipse([cx + wx - 2, cy + 14, cx + wx + 2, cy + 18],
+                         fill=(180, 180, 180))
+    elif kind == "quake":
+        # --- cracked earth: a leaning tower over a split in the
+        # ground, a smaller cracked building, dust at the base
+        # leaning tower (leans right): parallelogram
+        draw.polygon([(cx - 16, cy + 18), (cx - 12, cy - 8), (cx + 0, cy - 6),
+                      (cx - 4, cy + 18)], fill=(90, 90, 90), outline=INK)
+        # windows on the tower
+        for wx, wy in [(-13, -4), (-12, 3), (-11, 10)]:
+            draw.rectangle([cx + wx, cy + wy, cx + wx + 3, cy + wy + 3],
+                           fill=(240, 180, 40))
+        # crack down the tower face
+        draw.line([(cx - 9, cy - 7), (cx - 11, cy + 2), (cx - 8, cy + 9),
+                   (cx - 10, cy + 17)], fill=RED, width=2)
+        # smaller building, right, cracked
+        draw.rectangle([cx + 2, cy + 2, cx + 18, cy + 18], fill=(130, 130, 130),
+                       outline=INK)
+        draw.line([(cx + 8, cy + 2), (cx + 6, cy + 9), (cx + 10, cy + 14),
+                   (cx + 8, cy + 18)], fill=INK, width=2)
+        for wx, wy in [(5, 6), (12, 6), (5, 12), (12, 12)]:
+            draw.rectangle([cx + wx, cy + wy, cx + wx + 3, cy + wy + 3],
+                           fill=(20, 20, 20))
+        # ground split: the ground line breaks open in the middle
+        draw.line([(cx - 19, cy + 18), (cx - 8, cy + 18)], fill=INK, width=2)
+        draw.line([(cx + 8, cy + 18), (cx + 19, cy + 18)], fill=INK, width=2)
+        draw.polygon([(cx - 8, cy + 18), (cx - 2, cy + 24), (cx + 8, cy + 18)],
+                     fill=(60, 60, 60))
+        # dust puffs at the tower base
+        draw.ellipse([cx - 18, cy + 14, cx - 10, cy + 19], fill=(172, 167, 157))
+        draw.ellipse([cx + 2, cy + 15, cx + 9, cy + 19], fill=(150, 145, 135))
     elif kind == "storm":
-        draw.ellipse([cx - s * 0.4, cy - s * 0.3, cx + s * 0.1, cy + s * 0.1], fill=GREY)
-        draw.ellipse([cx - s * 0.1, cy - s * 0.4, cx + s * 0.4, cy + s * 0.05], fill=INK)
-        draw.polygon([(cx + s * 0.05, cy + s * 0.05), (cx - s * 0.1, cy + s * 0.35),
-                      (cx + s * 0.05, cy + s * 0.35), (cx - s * 0.05, cy + s * 0.55)],
-                     fill=(240, 180, 40))
+        # --- big dark supercell: two overlapping storm clouds, a
+        # bold lightning bolt, rain slanting below
+        draw.ellipse([cx - 19, cy - 18, cx + 1, cy - 2], fill=(90, 90, 90))
+        draw.ellipse([cx - 5, cy - 20, cx + 19, cy - 4], fill=INK)
+        draw.ellipse([cx - 14, cy - 8, cx + 6, cy - 2], fill=(130, 130, 130))
+        # lightning bolt, bold yellow zigzag from the cloud base
+        draw.polygon([(cx + 6, cy - 4), (cx + 0, cy + 6), (cx + 4, cy + 6),
+                      (cx - 2, cy + 18), (cx + 2, cy + 18), (cx + 6, cy + 8),
+                      (cx + 2, cy + 8), (cx + 10, cy - 4)], fill=(240, 180, 40))
+        # rain, slanting under the cloud's left half
+        for rx in (-16, -10, -4):
+            draw.line([(cx + rx, cy + 2), (cx + rx - 3, cy + 12)], fill=BLUE2,
+                      width=2)
+            draw.line([(cx + rx, cy + 12), (cx + rx - 3, cy + 20)], fill=BLUE2,
+                      width=2)
     elif kind == "fire":
-        draw.rectangle([cx - s * 0.35, cy + s * 0.1, cx + s * 0.35, cy + s * 0.45], fill=GREY)
-        draw.polygon([(cx, cy - s * 0.45), (cx + s * 0.2, cy - s * 0.05),
-                      (cx + s * 0.08, cy + s * 0.1), (cx - s * 0.12, cy + s * 0.1),
-                      (cx - s * 0.2, cy - s * 0.05)], fill=RED)
-        draw.ellipse([cx - s * 0.08, cy - s * 0.05, cx + s * 0.08, cy + s * 0.1],
-                     fill=(240, 180, 40))
+        # --- candy factory on fire: hall with a sawtooth roof, a tall
+        # chimney, flames from the roof and a window, smoke overhead
+        # chimney, right
+        draw.rectangle([cx + 10, cy - 12, cx + 16, cy + 20], fill=(70, 70, 70),
+                       outline=INK)
+        draw.rectangle([cx + 10, cy - 12, cx + 16, cy - 9], fill=(150, 150, 150))
+        # smoke from the chimney
+        draw.ellipse([cx + 8, cy - 20, cx + 18, cy - 13], fill=(150, 145, 135))
+        draw.ellipse([cx + 12, cy - 20, cx + 19, cy - 13], fill=(172, 167, 157))
+        # factory hall with sawtooth roof
+        draw.polygon([(cx - 19, cy + 20), (cx - 19, cy + 2), (cx - 13, cy - 4),
+                      (cx - 7, cy + 2), (cx - 1, cy - 4), (cx + 5, cy + 2),
+                      (cx + 10, cy + 2), (cx + 10, cy + 20)], fill=(110, 110, 110),
+                     outline=INK)
+        # windows (the middle one burns)
+        for wx in (-16, -8, 0):
+            draw.rectangle([cx + wx, cy + 8, cx + wx + 4, cy + 13],
+                           fill=(20, 20, 20))
+        # flames: from the roof and from the middle window
+        _flame(draw, cx - 10, cy + 2, cy - 12, 5, (215, 50, 25), 611)
+        _flame(draw, cx - 10, cy + 2, cy - 9, 4, (248, 140, 40), 612)
+        _flame(draw, cx - 6, cy + 13, cy + 2, 4, (248, 140, 40), 613)
+        _flame(draw, cx - 6, cy + 13, cy + 5, 3, (255, 210, 80), 614)
+        # ground line
+        draw.line([(cx - 19, cy + 20), (cx + 19, cy + 20)], fill=INK, width=2)
     elif kind == "virus":
-        draw.ellipse([cx - s * 0.25, cy - s * 0.25, cx + s * 0.25, cy + s * 0.25], fill=RED)
+        # --- Ebola virus, detailed: spiked body with inner texture,
+        # plus a small red-cross medical badge
+        vx, vy, r = cx - 5, cy + 4, 10
+        # spikes with knobs (8 directions)
         for a in range(0, 360, 45):
-            import math
-            r = math.radians(a)
-            x1, y1 = cx + 0.25 * s * math.cos(r), cy + 0.25 * s * math.sin(r)
-            x2, y2 = cx + 0.42 * s * math.cos(r), cy + 0.42 * s * math.sin(r)
+            rad = math.radians(a)
+            x1 = vx + (r - 1) * math.cos(rad)
+            y1 = vy + (r - 1) * math.sin(rad)
+            x2 = vx + (r + 5) * math.cos(rad)
+            y2 = vy + (r + 5) * math.sin(rad)
             draw.line([(x1, y1), (x2, y2)], fill=RED, width=3)
+            draw.ellipse([x2 - 2, y2 - 2, x2 + 2, y2 + 2], fill=RED)
+        draw.ellipse([vx - r, vy - r, vx + r, vy + r], fill=RED, outline=INK)
+        # inner texture: darker dots + a lighter highlight
+        for dx, dy in [(-4, -3), (3, -4), (0, 4), (4, 2)]:
+            draw.ellipse([vx + dx - 2, vy + dy - 2, vx + dx + 2, vy + dy + 2],
+                         fill=(140, 20, 20))
+        draw.ellipse([vx - 6, vy - 7, vx - 2, vy - 3], fill=(255, 120, 120))
+        # red-cross badge, top right
+        draw.rectangle([cx + 11, cy - 20, cx + 20, cy - 11], fill=(255, 255, 255),
+                       outline=INK)
+        draw.rectangle([cx + 14, cy - 18, cx + 17, cy - 13], fill=RED)
+        draw.rectangle([cx + 12, cy - 16, cx + 19, cy - 15], fill=RED)
     elif kind == "planet":
-        draw.ellipse([cx - s * 0.3, cy - s * 0.3, cx + s * 0.3, cy + s * 0.3],
-                     fill=(200, 170, 120), outline=INK)
-        draw.ellipse([cx - s * 0.5, cy - s * 0.12, cx + s * 0.5, cy + s * 0.12],
-                     outline=BLUE2, width=2)
+        # --- Mercury, cratered, with a small probe on solar panels
+        # (no ring — Mercury has none) and two stars
+        draw.ellipse([cx - 16, cy - 9, cx + 8, cy + 15], fill=(200, 170, 120),
+                     outline=INK, width=2)
+        # craters: darker rings with a lighter inner floor
+        for kx, ky, kr in [(-9, -3, 3), (-1, 6, 3), (-7, 7, 2)]:
+            draw.ellipse([cx + kx - kr, cy + ky - kr, cx + kx + kr, cy + ky + kr],
+                         fill=(165, 135, 90), outline=(150, 120, 80))
+            draw.ellipse([cx + kx - kr + 1, cy + ky - kr + 1,
+                          cx + kx + kr - 1, cy + ky + kr - 1],
+                         fill=(185, 155, 105))
+        # highlight arc, upper left
+        draw.arc([cx - 14, cy - 7, cx + 6, cy + 13], start=140, end=250,
+                 fill=(235, 215, 175), width=2)
+        # probe above the planet: body + two solar panels
+        draw.rectangle([cx + 2, cy - 20, cx + 8, cy - 15], fill=(110, 110, 110),
+                       outline=INK)
+        draw.rectangle([cx - 8, cy - 19, cx + 1, cy - 16], fill=BLUE2,
+                       outline=INK)
+        draw.rectangle([cx + 9, cy - 19, cx + 18, cy - 16], fill=BLUE2,
+                       outline=INK)
+        draw.ellipse([cx + 4, cy - 21, cx + 6, cy - 19], fill=RED)
+        # stars
+        for sx, sy in [(-17, -16), (17, 10)]:
+            draw.ellipse([cx + sx - 1, cy + sy - 1, cx + sx + 1, cy + sy + 1],
+                         fill=GOLD)
 
 
 # ---------------------------------------------------------------- maps
@@ -720,6 +909,14 @@ def draw_turkiye(img, draw, x0, y0, w, h):
     _watercolor(img, pts, (186, 156, 106), alpha=40, seed=211)
     _hand_outline(draw, pts, INK, seed=221)
     _stipple(draw, pts, (186, 156, 106), step=9)
+    # v9: small wave marks in the seas so the water reads as water,
+    # not a flat fill — kept clear of the labels and the clock
+    for wx in (0.58, 0.70):
+        x, y = x0 + wx * w, y0 + 9
+        draw.line([(x, y), (x + 4, y - 2), (x + 8, y)], fill=BLUE2, width=1)
+    for wx, wy in [(0.45, 0.79), (0.70, 0.83)]:
+        x, y = x0 + wx * w, y0 + wy * h
+        draw.line([(x, y), (x + 4, y - 2), (x + 8, y)], fill=BLUE2, width=1)
     draw.text((x0 + 6, y0 + 1), "TÜRKIYE", font=font(SANSB, 9), fill=INK)
     draw.text((x0 + 100, y0 + 1), "BLACK SEA", font=font(SANS, 7), fill=BLUE2)
     # OVERTIME clock, top right (in the Black Sea, clear of the land),
@@ -919,6 +1116,14 @@ def draw_libya(img, draw, x0, y0, w, h):
     for wy in (sy + 14, sy + 16):
         draw.line([(sx - 70, wy), (sx - 35, wy - 2), (sx, wy), (sx + 35, wy - 2),
                    (sx + 66, wy)], fill=BLUE2, width=1)
+    # v9: firelight shimmer on the water under the hull (short orange
+    # streaks between the wave lines) + white foam at the bow
+    for fx in (-40, 0, 40):
+        draw.line([(sx + fx, sy + 13), (sx + fx, sy + 17)], fill=(248, 160, 55),
+                  width=2)
+    for fx, fy in [(84, 0), (88, 4), (80, 6)]:
+        draw.ellipse([sx + fx - 2, sy + fy - 1, sx + fx + 2, sy + fy + 1],
+                     fill=(255, 255, 255))
     # thick red arrow: drone path to the ship, from the upper left
     draw.line([(x0 + 30, y0 + 10), (sx - 68, sy - 8)], fill=RED, width=4)
     draw.polygon([(sx - 68, sy - 8), (sx - 80, sy - 14), (sx - 76, sy)], fill=RED)
@@ -1014,6 +1219,13 @@ def draw_house_chart(img, draw, x0, y0, w, h):
                   fill=GREY, width=1)
     draw.rectangle([cx - 130, base_top + 10, cx + 130, base_top + 14],
                    fill=(245, 245, 245), outline=INK)
+    # v9: two small trees flanking the terrace base (a touch of green
+    # in front of the building) — clear of the flag, wings and bar
+    for tx in (cx - 140, cx + 140):
+        draw.rectangle([tx - 1, base_top + 9, tx + 1, base_top + 17],
+                       fill=(120, 90, 60))
+        draw.ellipse([tx - 5, base_top + 1, tx + 5, base_top + 11],
+                     fill=GREEN)
     # two small gold stars flanking the dome
     for sx, sy in [(cx - 58, base_top - 36), (cx + 52, base_top - 44)]:
         draw.polygon([(sx, sy - 5), (sx + 2, sy - 1), (sx + 5, sy - 1),
