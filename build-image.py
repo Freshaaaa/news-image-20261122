@@ -8,6 +8,8 @@ strip -> 3 big photo leads -> 33 photo cards in ONE unified 6x6 grid
 (v12: every story gets a clear visual tile) -> region bar -> realistic
 world map (v13: NASA Blue Marble raster) "WHERE IT HAPPENED" -> DATE
 CHECK -> HOW SURE -> footer. 36 stories, 6 regions.
+v14 "visual diperjelas lagi": grid tiles 162x70, banners 40px, headlines
+9pt, all photos sharpened + more saturated, map pins bigger (r 8).
 """
 import hashlib
 import math
@@ -15,7 +17,7 @@ import os
 import random
 import sys
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 W, H = 1024, 1024
 PAPER = (245, 239, 224)      # cream paper
@@ -289,6 +291,14 @@ def _cover(num, w, h, lead=True, small=False):
         y0 = max(0, min(sh - ch, cy - ch // 2))
         box = (0, y0, sw, y0 + ch)
     out = src.crop(box).resize((w, h), Image.LANCZOS)
+    # v14: make every photo read clearly at contact-sheet scale — a
+    # mild saturation + contrast lift and a light unsharp mask. All PIL
+    # ops, fully deterministic; applied here so leads, mediums and grid
+    # tiles all get it. The NASA map raster is pasted separately and is
+    # left untouched.
+    out = ImageEnhance.Color(out).enhance(1.14)
+    out = ImageEnhance.Contrast(out).enhance(1.07)
+    out = out.filter(ImageFilter.UnsharpMask(radius=2, percent=55, threshold=3))
     _photo_cache[key] = out
     return out
 
@@ -608,45 +618,47 @@ def render():
     RX = W - MX
 
     # ---- masthead (v10: like the reference front page — red tagline on
-    # top, big title, centered subtitle) ----
-    y = 4
+    # top, big title, centered subtitle; v14: title 36pt + subtitle 11pt
+    # to fund taller grid banners) ----
+    y = 3
     t = "ONE DAY OF WORLD NEWS, ONE PICTURE"
     d.text(((W - tw(d, t, font(SANSB, 9))) / 2, y), t, font=font(SANSB, 9), fill=RED)
-    y = 14
+    y = 12
     t = "SUNDAY 22 NOVEMBER 2026"
-    d.text(((W - tw(d, t, font(SERIFB, 38))) / 2, y), t, font=font(SERIFB, 38), fill=INK)
-    y = 53
+    d.text(((W - tw(d, t, font(SERIFB, 36))) / 2, y), t, font=font(SERIFB, 36), fill=INK)
+    y = 49
     t = "36 STORIES  ·  6 REGIONS  ·  EVERY ONE DATED SUNDAY 22 NOVEMBER 2026"
-    d.text(((W - tw(d, t, font(SANSB, 12))) / 2, y), t, font=font(SANSB, 12), fill=INK)
-    y = 69
+    d.text(((W - tw(d, t, font(SANSB, 11))) / 2, y), t, font=font(SANSB, 11), fill=INK)
+    y = 63
     rule(d, MX, RX, y, INK, 2)
     rule(d, MX, RX, y + 3, INK, 1)
 
-    # ---- THE DAY IN UTC (v13: 32px) ----
-    y = 78
-    d.rectangle([MX, y, RX, y + 32], fill=PAPER2, outline=INK, width=1)
-    d.text((MX + 6, y + 2), "THE DAY IN UTC", font=font(SANSB, 9), fill=RED)
+    # ---- THE DAY IN UTC (v14: 30px) ----
+    y = 70
+    d.rectangle([MX, y, RX, y + 30], fill=PAPER2, outline=INK, width=1)
+    d.text((MX + 6, y + 1), "THE DAY IN UTC", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 7.0
     for i, (t, txt) in enumerate(UTC_STRIP):
         x = MX + 6 + i * col_w
-        d.text((x, y + 11), t, font=font(SANSB, 11), fill=RED)
-        para(d, x, y + 23, txt, font(SANS, 8), INK, col_w - 6, lh=9, max_lines=1)
+        d.text((x, y + 10), t, font=font(SANSB, 11), fill=RED)
+        para(d, x, y + 19, txt, font(SANS, 8), INK, col_w - 6, lh=9, max_lines=1)
 
-    # ---- THE DAY IN NUMBERS (v13: 40px) ----
-    y = 116
-    d.rectangle([MX, y, RX, y + 40], fill=(255, 255, 255), outline=INK, width=1)
-    d.text((MX + 6, y + 3), "THE DAY IN NUMBERS", font=font(SANSB, 9), fill=RED)
+    # ---- THE DAY IN NUMBERS (v14: 34px) ----
+    y = 104
+    d.rectangle([MX, y, RX, y + 34], fill=(255, 255, 255), outline=INK, width=1)
+    d.text((MX + 6, y + 2), "THE DAY IN NUMBERS", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 6.0
     for i, (num, txt) in enumerate(NUMBERS):
         x = MX + 6 + i * col_w
-        d.text((x, y + 14), num, font=font(SERIFB, 17), fill=INK)
-        para(d, x, y + 30, txt, font(SANS, 8), GREY, col_w - 6, lh=9, max_lines=2)
+        d.text((x, y + 12), num, font=font(SERIFB, 16), fill=INK)
+        para(d, x, y + 24, txt, font(SANS, 8), GREY, col_w - 6, lh=9, max_lines=2)
 
     # ---- 3 big leads (v10: PHOTO on top, then kicker + headline + deck
-    # below — like the reference front page; v13: 198px tall, photo 92px
-    # to fund the taller realistic map) ----
-    y = 168
-    lead_h = 198
+    # below — like the reference front page; v14: 192px tall, photo still
+    # 92px, deck line-height 11 to fund the taller grid banners; photos
+    # get the v14 sharpen/saturation lift via _cover) ----
+    y = 148
+    lead_h = 192
     col_w = (RX - MX - 12) / 3.0
     for i, (num, kick, head, deck, src, conf) in enumerate(LEADS):
         x = MX + i * (col_w + 6)
@@ -665,7 +677,7 @@ def render():
         # headline (18pt so the longest one fits the column)
         d.text((x + 6, y + 112), head, font=font(SERIFB, 18), fill=INK)
         # deck, 3 lines max
-        para(d, x + 6, y + 136, deck, font(SANS, 10), INK, col_w - 12, lh=12,
+        para(d, x + 6, y + 136, deck, font(SANS, 10), INK, col_w - 12, lh=11,
              max_lines=3)
         # source
         sy = y + lead_h - 16
@@ -673,45 +685,46 @@ def render():
 
     # ---- THE REST OF THE DAY (v12: ONE unified photo grid — stories
     # 4-36, 6 cols x 6 rows; every story gets a clear photo tile: banner
-    # + kicker + 2-line headline. User order "visual biar lebih jelas":
-    # tiles are bigger (162x62, photo 35px) and text per tile is minimal,
-    # so the medium decks and the text-only ALSO ON list are gone — the
-    # space they took now funds tiles that actually read) ----
-    y = 372
+    # + kicker + 2-line headline. v14 "visual diperjelas lagi": tiles
+    # 162x70 (was 162x62), banner 40px (was 35), headline 9pt (was 8),
+    # number badge 8pt, photos sharpened + more saturated via _cover.
+    # Funded by small trims everywhere else (masthead, strips, leads,
+    # gaps, DATE CHECK) — map stays 120px, lead photos stay 92px) ----
+    y = 346
     d.text((MX, y), "MORE STORIES — 33 MORE, EACH WITH A PHOTO",
            font=font(SANSB, 10), fill=INK)
     rule(d, MX, RX, y + 13, INK, 1)
-    y = 389
+    y = 364
     GRID = [(num, kick, head, False)
             for num, kick, head, _d, _s, _c, _i in MEDIUM] + \
            [(num, place, head, True) for num, place, head, _s in SMALL]
     card_w = (RX - MX - 5 * 4) / 6.0
-    card_h = 62
+    card_h = 70
     for idx, (num, kick, head, small) in enumerate(GRID):
         row, col = divmod(idx, 6)
         x = MX + col * (card_w + 4)
-        yy = y + row * (card_h + 3)
+        yy = y + row * (card_h + 2)
         d.rectangle([x, yy, x + card_w, yy + card_h], fill=(255, 255, 255),
                     outline=LINE, width=1)
-        # photo banner: full card width, 35px tall, on top
-        ph = _cover(num, int(card_w) - 2, 35, lead=False, small=small)
+        # photo banner: full card width, 40px tall, on top
+        ph = _cover(num, int(card_w) - 2, 40, lead=False, small=small)
         img.paste(ph, (int(x) + 1, yy + 1))
-        d.rectangle([x + 1, yy + 1, x + card_w - 1, yy + 36], outline=LINE, width=1)
+        d.rectangle([x + 1, yy + 1, x + card_w - 1, yy + 41], outline=LINE, width=1)
         # story number badge over the banner's top-left corner
-        fnum = font(SANSB, 7)
+        fnum = font(SANSB, 8)
         ntxt = str(num)
         nw = int(d.textlength(ntxt, font=fnum)) + 6
-        d.rounded_rectangle([x + 2, yy + 2, x + 2 + nw, yy + 12], radius=2, fill=RED)
+        d.rounded_rectangle([x + 2, yy + 2, x + 2 + nw, yy + 13], radius=2, fill=RED)
         d.text((x + 5, yy + 3), ntxt, font=fnum, fill=(255, 255, 255))
         # kicker + headline (2 lines); deck dropped in v12 for clarity
-        d.text((x + 5, yy + 38), kick, font=font(SANSB, 7), fill=RED)
-        para(d, x + 5, yy + 46, head, font(SANS, 8), INK, card_w - 10, lh=8,
+        d.text((x + 5, yy + 42), kick, font=font(SANSB, 7), fill=RED)
+        para(d, x + 5, yy + 50, head, font(SANS, 9), INK, card_w - 10, lh=9,
              max_lines=2)
-    assert y + 5 * (card_h + 3) + card_h <= 782, "grid overflow"
+    assert y + 5 * (card_h + 2) + card_h <= 800, "grid overflow"
 
-    # ---- STORIES BY REGION (single 14px row: label + bar + legend) ----
-    y = 782
-    d.text((MX, y + 3), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
+    # ---- STORIES BY REGION (single 16px row: label + bar + legend) ----
+    y = 800
+    d.text((MX, y + 2), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
     bx = MX + 118
     total = sum(n for _, n, _ in REGIONS)
     legend = "  ·  ".join(f"{name} {n}" for name, n, _ in REGIONS)
@@ -720,39 +733,40 @@ def render():
     x = bx
     for name, n, col in REGIONS:
         wseg = bar_w * n / total
-        d.rectangle([x, y + 2, x + wseg - 1, y + 16], fill=col)
+        d.rectangle([x, y + 1, x + wseg - 1, y + 15], fill=col)
         x += wseg
-    d.text((bx + bar_w + 8, y + 3), legend, font=font(SANS, 8), fill=INK)
+    d.text((bx + bar_w + 8, y + 2), legend, font=font(SANS, 8), fill=INK)
 
     # ---- WHERE IT HAPPENED (v13: 120px — the map is a real satellite
     # image now, NASA Blue Marble, so it gets its height back; pins sit
-    # on the real continents with a dark halo) ----
-    y = 804
+    # on the real continents with a dark halo. v14: pins bigger (r 8,
+    # font 9) so they read clearer at a glance) ----
+    y = 820
     d.text((MX, y), "WHERE IT HAPPENED  ·  PINS 1–13  (13 = IN ORBIT)",
            font=font(SANSB, 10), fill=INK)
-    draw_world_map(img, d, MX, y + 13, RX - MX, 120, pin_r=7, pin_font=8)
+    draw_world_map(img, d, MX, y + 13, RX - MX, 120, pin_r=8, pin_font=9)
 
-    # ---- DATE CHECK + HOW SURE (v13: 38px — same content, tighter) ----
-    y = 943
-    d.rectangle([MX, y, RX, y + 40], fill=(255, 255, 255), outline=RED, width=2)
+    # ---- DATE CHECK + HOW SURE (v14: 36px — same content, tighter) ----
+    y = 959
+    d.rectangle([MX, y, RX, y + 36], fill=(255, 255, 255), outline=RED, width=2)
     d.text((MX + 6, y + 1), "DATE CHECK — LEFT OUT AS OLDER NEWS",
            font=font(SANSB, 9), fill=RED)
-    para(d, MX + 6, y + 10,
+    para(d, MX + 6, y + 9,
          "Shenzhen summit (19–20 Nov) · ICJ Rohingya ruling (19 Nov) · GTA VI $3.79bn "
          "(19–20 Nov) · Anthropic IPO $93.5bn (20 Nov) · 'El Chapo Isidro' arrested "
          "(20–21 Nov) · Akvan landfall (20 Nov) · Banda Sea M6.8 (21 Nov)",
-         font(SANS, 8), INK, RX - MX - 12, lh=10, max_lines=1)
-    d.text((MX + 6, y + 21),
+         font(SANS, 8), INK, RX - MX - 12, lh=9, max_lines=1)
+    d.text((MX + 6, y + 18),
            "NOT YET: ATP final (23 Nov) · BepiColombo separation (9–10 Dec)",
            font=font(SANSB, 8), fill=INK)
-    d.text((MX + 6, y + 30), "HOW SURE ARE WE?  ",
+    d.text((MX + 6, y + 26), "HOW SURE ARE WE?  ",
            font=font(SANSB, 8), fill=INK)
     xx = MX + 6 + tw(d, "HOW SURE ARE WE?  ", font(SANSB, 8))
-    d.text((xx, y + 30), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
+    d.text((xx, y + 26), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
            font=font(SANS, 8), fill=GREY)
 
     # ---- footer ----
-    y = 987
+    y = 999
     rule(d, MX, RX, y, INK, 1)
     d.text((MX, y + 4),
            "Every story here happened, or was first reported, on Sunday 22 November 2026.",
