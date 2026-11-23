@@ -4,9 +4,10 @@
 One image, 1024x1024, PIL only, fully deterministic (no network, no clock,
 no unseeded randomness). Writes entry.png next to this script.
 Layout follows the proven winner template: masthead -> UTC strip -> numbers
-strip -> 3 big photo leads -> 10 medium photo cards -> region bar ->
-world map "WHERE IT HAPPENED" -> "ALSO ON" 23 small stories -> DATE CHECK
--> HOW SURE -> footer. 36 stories, 9 regions, 19 fields.
+strip -> 3 big photo leads -> 10 medium photo cards (v11: full-width photo
+banner on top, like the top entries) -> region bar -> world map
+"WHERE IT HAPPENED" -> "ALSO ON" 23 small stories -> DATE CHECK -> HOW
+SURE -> footer. 36 stories, 6 regions.
 """
 import hashlib
 import math
@@ -367,7 +368,7 @@ UTC_STRIP = [
 
 NUMBERS = [
     ("258", "Democratic seats in the US House"),
-    ("−3.7%", "S&P 500 in one day"),
+    ("186", "drones fired at Ukraine overnight"),
     ("M6.7", "Peru earthquake"),
     ("26", "killed as a boat capsizes in Nigeria"),
     ("93,000", "without power after the Peru quake"),
@@ -375,10 +376,9 @@ NUMBERS = [
 ]
 
 REGIONS = [
-    ("Europe", 7, (178, 28, 28)), ("N. America", 7, (30, 64, 140)),
-    ("Latin America", 4, (34, 110, 60)), ("Middle East", 5, (166, 110, 10)),
-    ("Africa", 5, (120, 72, 20)), ("Asia", 4, (140, 40, 120)),
-    ("Oceania", 1, (20, 120, 130)), ("Global", 3, (90, 86, 76)),
+    ("Europe", 7, (178, 28, 28)), ("Americas", 11, (30, 64, 140)),
+    ("Middle East", 5, (166, 110, 10)), ("Africa", 5, (120, 72, 20)),
+    ("Asia-Pacific", 5, (140, 40, 120)), ("World", 3, (90, 86, 76)),
 ]
 
 # (lat, lon) for map pins 1-13
@@ -609,7 +609,7 @@ def render():
     t = "SUNDAY 22 NOVEMBER 2026"
     d.text(((W - tw(d, t, font(SERIFB, 40))) / 2, y), t, font=font(SERIFB, 40), fill=INK)
     y = 56
-    t = "36 STORIES  ·  9 REGIONS  ·  19 FIELDS  ·  ALL FROM THIS SUNDAY"
+    t = "36 STORIES  ·  6 REGIONS  ·  EVERY ONE DATED SUNDAY 22 NOVEMBER 2026"
     d.text(((W - tw(d, t, font(SANSB, 12))) / 2, y), t, font=font(SANSB, 12), fill=INK)
     y = 72
     rule(d, MX, RX, y, INK, 2)
@@ -638,7 +638,7 @@ def render():
     # ---- 3 big leads (v10: PHOTO on top, then kicker + headline + deck
     # below — like the reference front page) ----
     y = 177
-    lead_h = 246
+    lead_h = 236
     col_w = (RX - MX - 12) / 3.0
     for i, (num, kick, head, deck, src, conf) in enumerate(LEADS):
         x = MX + i * (col_w + 6)
@@ -646,28 +646,29 @@ def render():
         # opaque paper fill covers the overlap, only the fringe shows)
         _rect_shadow(img, x, y, x + col_w, y + lead_h)
         d.rectangle([x, y, x + col_w, y + lead_h], fill=PAPER, outline=INK, width=1)
-        # photo: full column width, 130px tall, on top
-        ph = _cover(num, int(col_w) - 2, 130, lead=True)
+        # photo: full column width, 124px tall, on top
+        ph = _cover(num, int(col_w) - 2, 124, lead=True)
         img.paste(ph, (int(x) + 1, y + 1))
-        d.rectangle([x + 1, y + 1, x + col_w - 1, y + 131], outline=INK, width=1)
+        d.rectangle([x + 1, y + 1, x + col_w - 1, y + 125], outline=INK, width=1)
         # kicker (red) + confidence badge, below the photo
-        ky = y + 137
+        ky = y + 131
         d.text((x + 6, ky), f"#{num}  {kick}", font=font(SANSB, 9), fill=RED)
         badge(d, x + col_w - 62, ky - 1, conf)
         # headline (18pt so the longest one fits the column)
-        d.text((x + 6, y + 152), head, font=font(SERIFB, 18), fill=INK)
+        d.text((x + 6, y + 146), head, font=font(SERIFB, 18), fill=INK)
         # deck, 3 lines max
-        para(d, x + 6, y + 176, deck, font(SANS, 10), INK, col_w - 12, lh=12,
+        para(d, x + 6, y + 170, deck, font(SANS, 10), INK, col_w - 12, lh=12,
              max_lines=3)
         # source
         sy = y + lead_h - 16
         d.text((x + 6, sy + 2), src, font=font(SANS, 8), fill=GREY)
 
-    # ---- 10 medium cards, 2 rows of 5 (74px; NOT compressed in v4 —
-    # the ALSO ON cut alone pays for the bigger leads) ----
-    y = 429
+    # ---- 10 medium cards, 2 rows of 5 (v11: PHOTO BANNER on top, like
+    # the top entries — full-width banner, then kicker + headline + deck
+    # below; the tiny left thumbnail is gone) ----
+    y = 419
     card_w = (RX - MX - 16) / 5.0
-    card_h = 74
+    card_h = 106
     for row in range(2):
         for col in range(5):
             m = MEDIUM[row * 5 + col]
@@ -676,22 +677,22 @@ def render():
             yy = y + row * (card_h + 3)
             d.rectangle([x, yy, x + card_w, yy + card_h], fill=(255, 255, 255),
                         outline=LINE, width=1)
-            d.text((x + 5, yy + 3), f"{num}  {kick}", font=font(SANSB, 7), fill=RED)
-            # v10: small PHOTO on the left; headline + deck to its right
-            # so nothing overlaps
-            ph = _cover(num, 40, 46, lead=False)
-            img.paste(ph, (int(x) + 5, yy + 13))
-            d.rectangle([x + 5, yy + 13, x + 45, yy + 59], outline=LINE, width=1)
-            para(d, x + 50, yy + 14, head, font(SANSB, 10), INK, card_w - 56, lh=11,
+            # photo banner: full card width, 50px tall, on top
+            ph = _cover(num, int(card_w) - 2, 50, lead=False)
+            img.paste(ph, (int(x) + 1, yy + 1))
+            d.rectangle([x + 1, yy + 1, x + card_w - 1, yy + 51], outline=LINE, width=1)
+            # confidence badge over the banner's top-right corner
+            badge(d, x + card_w - 62, yy + 3, conf)
+            # kicker, headline (2 lines), deck (2 lines); per-card source
+            # dropped in v11 — outlets are credited in the footer
+            d.text((x + 5, yy + 54), f"{num}  {kick}", font=font(SANSB, 7), fill=RED)
+            para(d, x + 5, yy + 64, head, font(SANSB, 10), INK, card_w - 10, lh=11,
                  max_lines=2)
-            para(d, x + 50, yy + 39, deck, font(SANS, 8), INK, card_w - 56, lh=9,
+            para(d, x + 5, yy + 86, deck, font(SANS, 8), INK, card_w - 10, lh=9,
                  max_lines=2)
-            sy = yy + card_h - 13
-            d.text((x + 5, sy + 1), src, font=font(SANS, 7), fill=GREY)
-            badge(d, x + card_w - 60, sy, conf)
 
     # ---- STORIES BY REGION (single 14px row: label + bar + legend) ----
-    y = 586
+    y = 640
     d.text((MX, y + 3), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
     bx = MX + 118
     total = sum(n for _, n, _ in REGIONS)
@@ -705,18 +706,19 @@ def render():
         x += wseg
     d.text((bx + bar_w + 8, y + 3), legend, font=font(SANS, 8), fill=INK)
 
-    # ---- WHERE IT HAPPENED (taller strip: 160px, Europe breathes) ----
-    y = 604
+    # ---- WHERE IT HAPPENED (v11: 112px strip — funds the taller medium
+    # cards; Europe still reads, pins unchanged) ----
+    y = 660
     d.text((MX, y), "WHERE IT HAPPENED  ·  PINS 1–13  (13 = IN ORBIT)",
            font=font(SANSB, 10), fill=INK)
-    draw_world_map(img, d, MX, y + 15, RX - MX, 160)
+    draw_world_map(img, d, MX, y + 15, RX - MX, 112)
 
     # ---- ALSO ON ----
-    y = 785
+    y = 793
     d.text((MX, y), "ALSO ON SUNDAY 22 NOVEMBER — 23 MORE STORIES",
            font=font(SANSB, 10), fill=INK)
     rule(d, MX, RX, y + 15, INK, 1)
-    y = 805
+    y = 813
     col_w = (RX - MX - 12) / 2.0
     row_h = 11
     f_head = font(SANS, 9)
@@ -743,25 +745,25 @@ def render():
             d.text((x + col_w - src_w, yy), src, font=f_src, fill=GREY)
             yy += row_h
         max_y = max(max_y, yy)
-    assert max_y <= 940, f"ALSO ON overflow: ends at y={max_y}"
+    assert max_y <= 950, f"ALSO ON overflow: ends at y={max_y}"
 
     # ---- DATE CHECK + HOW SURE ----
-    y = 943
-    d.rectangle([MX, y, RX, y + 52], fill=(255, 255, 255), outline=RED, width=2)
+    y = 949
+    d.rectangle([MX, y, RX, y + 46], fill=(255, 255, 255), outline=RED, width=2)
     d.text((MX + 6, y + 2), "DATE CHECK — LEFT OUT AS OLDER NEWS",
            font=font(SANSB, 9), fill=RED)
-    para(d, MX + 6, y + 12,
+    para(d, MX + 6, y + 11,
          "Shenzhen summit (19–20 Nov) · ICJ Rohingya ruling (19 Nov) · GTA VI $3.79bn "
          "(19–20 Nov) · Anthropic IPO $93.5bn (20 Nov) · 'El Chapo Isidro' arrested "
          "(20–21 Nov) · Akvan landfall (20 Nov) · Banda Sea M6.8 (21 Nov)",
          font(SANS, 8), INK, RX - MX - 12, lh=10, max_lines=1)
-    d.text((MX + 6, y + 28),
+    d.text((MX + 6, y + 23),
            "NOT YET: ATP final (23 Nov) · BepiColombo separation (9–10 Dec)",
            font=font(SANSB, 8), fill=INK)
-    d.text((MX + 6, y + 40), "HOW SURE ARE WE?  ",
+    d.text((MX + 6, y + 34), "HOW SURE ARE WE?  ",
            font=font(SANSB, 8), fill=INK)
     xx = MX + 6 + tw(d, "HOW SURE ARE WE?  ", font(SANSB, 8))
-    d.text((xx, y + 40), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
+    d.text((xx, y + 34), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
            font=font(SANS, 8), fill=GREY)
 
     # ---- footer ----
@@ -772,7 +774,7 @@ def render():
            font=font(SANSB, 9), fill=INK)
     d.text((MX, y + 15),
            "Sources: AP, Reuters, AFP, BBC, USGS, ESA, IMD, UKMTO, NEMA, WHO. "
-           "All photographs are AI-generated illustrations; the world map is "
+           "All photographs are AI-generated; the world map is "
            "original vector work.",
            font=font(SANS, 8), fill=GREY)
     # v6: very subtle paper grain over the whole page (last step, so it
