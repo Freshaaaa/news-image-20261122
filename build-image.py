@@ -304,54 +304,156 @@ def icon(draw, kind, cx, cy, s, col=INK):
 
 
 # ---------------------------------------------------------------- maps
-def latlon_to_xy(lat, lon, x0, y0, w, h):
+# World map: continents as (lon, lat) coastlines, drawn with an
+# equirectangular projection cropped to lat 84..-60 so the strip reads
+# larger. Pins use the same projection, so they land on the land.
+LAT_TOP, LAT_BOT = 84.0, -60.0
+
+
+def world_xy(lat, lon, x0, y0, w, h):
     x = x0 + (lon + 180.0) / 360.0 * w
-    y = y0 + (90.0 - lat) / 180.0 * h
+    y = y0 + (LAT_TOP - lat) / (LAT_TOP - LAT_BOT) * h
     return x, y
 
 
-CONTINENTS = [
-    # North America
-    [(62, 62), (120, 42), (200, 46), (258, 62), (278, 92), (238, 122),
-     (218, 162), (180, 182), (148, 202), (118, 182), (88, 142), (58, 102)],
-    # Greenland
-    [(300, 22), (338, 16), (358, 36), (330, 56), (300, 46)],
-    # South America
-    [(230, 232), (280, 222), (320, 242), (330, 292), (300, 352),
-     (270, 392), (250, 342), (225, 282)],
-    # Europe
-    [(470, 62), (520, 46), (560, 62), (580, 92), (540, 112),
-     (510, 132), (480, 122), (460, 92)],
-    # Africa
-    [(480, 152), (540, 142), (590, 162), (610, 202), (590, 262),
-     (560, 312), (530, 332), (500, 282), (480, 222), (470, 182)],
-    # Asia
-    [(600, 52), (700, 42), (800, 52), (900, 72), (950, 112), (920, 162),
-     (880, 202), (840, 242), (800, 282), (760, 262), (720, 222),
-     (680, 182), (640, 142), (610, 102)],
-    # Australia
-    [(820, 332), (880, 322), (920, 342), (900, 382), (850, 392), (820, 362)],
+# (lon, lat) coastline points, clockwise. Simplified real coastlines —
+# enough points to read as the actual continents at this scale.
+NORTH_AMERICA = [
+    (-168, 66), (-160, 71), (-150, 70), (-140, 70), (-130, 70), (-120, 69),
+    (-110, 68), (-100, 68), (-95, 68), (-92, 66), (-88, 60), (-82, 56),
+    (-78, 58), (-72, 62), (-66, 60), (-64, 58), (-60, 55), (-56, 52),
+    (-60, 47), (-65, 44), (-70, 42), (-73, 40), (-75, 38), (-76, 35),
+    (-80, 32), (-81, 28), (-80, 25), (-82, 28), (-85, 30), (-89, 29),
+    (-93, 29), (-97, 26), (-97, 22), (-94, 18), (-91, 19), (-87, 21),
+    (-88, 16), (-86, 15), (-84, 12), (-82, 9), (-80, 9), (-77, 9),
+    (-77, 7), (-80, 7), (-83, 8), (-86, 12), (-90, 14), (-93, 15),
+    (-96, 16), (-100, 17), (-105, 20), (-108, 23), (-110, 23), (-112, 28),
+    (-114, 31), (-117, 33), (-120, 34), (-122, 37), (-124, 40), (-124, 46),
+    (-127, 49), (-130, 54), (-135, 57), (-142, 60), (-148, 60), (-155, 58),
+    (-160, 58), (-165, 60),
+]
+GREENLAND = [
+    (-44, 60), (-40, 65), (-32, 68), (-22, 70), (-20, 74), (-25, 78),
+    (-35, 80), (-50, 80), (-58, 77), (-56, 72), (-53, 68), (-50, 64),
+]
+SOUTH_AMERICA = [
+    (-77, 7), (-75, 10), (-72, 12), (-68, 11), (-64, 10), (-61, 9),
+    (-57, 6), (-53, 5), (-51, 4), (-50, 0), (-44, -3), (-38, -5),
+    (-35, -8), (-37, -11), (-39, -15), (-40, -20), (-42, -23), (-46, -25),
+    (-48, -27), (-52, -32), (-57, -35), (-58, -38), (-62, -41), (-65, -45),
+    (-67, -49), (-69, -52), (-68, -55), (-66, -55), (-68, -52), (-70, -48),
+    (-72, -42), (-73, -37), (-72, -30), (-70, -23), (-70, -18), (-75, -15),
+    (-77, -12), (-80, -6), (-81, -1), (-80, 3), (-77, 5),
+]
+EUROPE = [
+    (18, 70), (25, 71), (30, 70), (28, 66), (24, 62), (21, 59), (19, 55),
+    (15, 54), (11, 57), (8, 57), (8, 54), (5, 53), (3, 51), (0, 50),
+    (-2, 49), (-2, 47), (-4, 43), (-9, 43), (-9, 38), (-8, 37), (-6, 36),
+    (-2, 36), (0, 39), (3, 42), (6, 43), (9, 44), (12, 42), (14, 40),
+    (16, 38), (18, 40), (16, 42), (14, 45), (16, 44), (18, 42), (19, 41),
+    (21, 40), (23, 39), (23, 37), (25, 38), (26, 40), (28, 41), (30, 42),
+    (33, 44), (36, 45), (39, 46), (41, 46), (43, 45), (45, 44), (47, 45),
+    (49, 46), (48, 48), (46, 51), (42, 54), (38, 57), (34, 59), (30, 61),
+    (27, 63), (24, 66), (21, 68),
+]
+BRITAIN = [
+    (-5, 50), (-3, 53), (-5, 56), (-4, 58), (-2, 58), (0, 57), (0, 53),
+    (1, 51), (-2, 50),
+]
+AFRICA = [
+    (-6, 35), (-9, 32), (-13, 28), (-15, 24), (-17, 21), (-17, 16),
+    (-15, 11), (-13, 8), (-8, 5), (-4, 5), (0, 6), (5, 6), (8, 4),
+    (9, 4), (12, 0), (13, -3), (12, -6), (13, -12), (12, -17), (14, -22),
+    (16, -28), (18, -32), (20, -35), (25, -34), (28, -32), (32, -28),
+    (35, -24), (36, -18), (40, -15), (40, -10), (41, -5), (42, -1),
+    (46, 0), (51, 2), (51, 10), (48, 11), (44, 11), (42, 12), (40, 15),
+    (38, 18), (36, 22), (35, 27), (34, 28), (32, 31), (30, 31), (25, 32),
+    (20, 32), (15, 32), (11, 34), (10, 37), (5, 37), (0, 36), (-3, 35),
+]
+MADAGASCAR = [
+    (44, -16), (47, -15), (50, -16), (50, -20), (47, -24), (44, -25),
+    (43, -21),
+]
+ASIA = [
+    (28, 41), (30, 41), (33, 42), (36, 42), (39, 41), (41, 41), (44, 39),
+    (47, 38), (50, 39), (53, 41), (56, 43), (59, 45), (62, 47), (66, 49),
+    (70, 51), (74, 53), (78, 55), (82, 57), (86, 59), (90, 61), (95, 63),
+    (100, 65), (105, 67), (110, 69), (115, 71), (120, 72), (125, 71),
+    (130, 71), (135, 71), (140, 72), (145, 71), (150, 70), (155, 69),
+    (160, 69), (165, 68), (170, 67), (178, 65), (178, 62), (170, 60),
+    (163, 59), (158, 55), (156, 51), (152, 48), (148, 45), (144, 42),
+    (141, 40), (138, 37), (135, 34), (132, 33), (130, 32), (128, 35),
+    (127, 37), (126, 38), (124, 40), (121, 38), (120, 35), (122, 31),
+    (121, 28), (119, 24), (117, 22), (113, 22), (109, 19), (106, 12),
+    (104, 9), (101, 6), (100, 2), (103, 1), (101, 5), (99, 9), (97, 13),
+    (94, 16), (92, 21), (89, 22), (87, 21), (84, 19), (81, 16), (80, 13),
+    (78, 9), (77, 8), (76, 10), (74, 14), (72, 19), (70, 22), (67, 24),
+    (63, 25), (59, 25), (56, 26), (54, 27), (52, 28), (50, 29), (48, 30),
+    (48, 29), (50, 27), (52, 25), (55, 24), (58, 23), (59, 22), (57, 19),
+    (55, 17), (52, 15), (49, 14), (46, 13), (43, 12), (42, 14), (40, 19),
+    (39, 23), (38, 27), (36, 29), (35, 31), (36, 34), (35, 36), (33, 36),
+    (30, 36), (28, 37), (27, 38), (28, 40),
+]
+JAPAN = [
+    (130, 31), (132, 33), (134, 34), (136, 34), (138, 35), (140, 37),
+    (141, 39), (141, 41), (142, 43), (144, 44), (142, 42), (140, 39),
+    (139, 37), (137, 35), (135, 34), (133, 34), (131, 33),
+]
+SUMATRA = [
+    (95, 5), (98, 3), (100, 1), (102, -1), (104, -3), (106, -6),
+    (104, -5), (102, -3), (100, 0), (98, 2),
+]
+JAVA = [
+    (105, -6), (108, -7), (111, -7), (114, -8), (114, -9), (110, -8),
+    (107, -7),
+]
+BORNEO = [
+    (109, 1), (111, 3), (114, 5), (117, 6), (119, 3), (118, 0), (116, -2),
+    (113, -3), (110, -2),
+]
+NEW_GUINEA = [
+    (131, -1), (135, -2), (138, -3), (141, -3), (144, -5), (146, -6),
+    (147, -8), (144, -8), (141, -8), (138, -7), (135, -5), (132, -3),
+]
+AUSTRALIA = [
+    (114, -22), (114, -28), (115, -33), (118, -35), (122, -34), (126, -32),
+    (129, -32), (132, -32), (135, -35), (138, -35), (140, -38), (143, -39),
+    (146, -39), (149, -37), (150, -34), (153, -31), (153, -27), (151, -24),
+    (148, -20), (146, -19), (143, -16), (142, -11), (141, -13), (138, -15),
+    (136, -15), (135, -17), (133, -13), (131, -12), (128, -14), (125, -15),
+    (122, -17), (119, -20), (116, -21),
+]
+NEW_ZEALAND = [
+    (167, -45), (170, -43), (173, -41), (175, -39), (177, -38), (175, -40),
+    (173, -42), (170, -44), (167, -46),
+]
+WORLD_POLYS = [
+    NORTH_AMERICA, GREENLAND, SOUTH_AMERICA, EUROPE, BRITAIN, AFRICA,
+    MADAGASCAR, ASIA, JAPAN, SUMATRA, JAVA, BORNEO, NEW_GUINEA, AUSTRALIA,
+    NEW_ZEALAND,
 ]
 
 
 def draw_world_map(draw, x0, y0, w, h):
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=SEA, outline=INK, width=1)
-    for poly in CONTINENTS:
-        pts = [(x0 + px / 1000.0 * w, y0 + py / 500.0 * h) for px, py in poly]
+    for poly in WORLD_POLYS:
+        pts = [world_xy(lat, lon, x0, y0, w, h) for lon, lat in poly]
         draw.polygon(pts, fill=LAND, outline=(150, 140, 115))
-    # graticule
-    for gx in range(1, 6):
-        x = x0 + gx * w / 6.0
+    # graticule: every 60 deg lon, lat 60/30/-30; equator slightly stronger
+    for lon in (-120, -60, 0, 60, 120):
+        x = x0 + (lon + 180.0) / 360.0 * w
         draw.line([(x, y0), (x, y0 + h)], fill=(190, 210, 226), width=1)
-    for gy in range(1, 3):
-        y = y0 + gy * h / 3.0
-        draw.line([(x0, y), (x0 + w, y)], fill=(190, 210, 226), width=1)
+    for lat in (60, 30, -30):
+        _, yy = world_xy(lat, 0, x0, y0, w, h)
+        draw.line([(x0, yy), (x0 + w, yy)], fill=(190, 210, 226), width=1)
+    _, eq = world_xy(0, 0, x0, y0, w, h)
+    draw.line([(x0, eq), (x0 + w, eq)], fill=(175, 198, 218), width=1)
     # pins 1-12
     f = font(SANSB, 9)
     for num, (lat, lon) in sorted(PINS.items()):
         if lat is None:
             continue
-        px, py = latlon_to_xy(lat, lon, x0, y0, w, h)
+        px, py = world_xy(lat, lon, x0, y0, w, h)
         dx, dy = PIN_OFFSETS.get(num, (0, 0))
         if (dx, dy) != (0, 0):
             draw.line([(px, py), (px + dx, py + dy)], fill=RED, width=1)
@@ -371,54 +473,80 @@ def draw_world_map(draw, x0, y0, w, h):
 
 
 def draw_turkiye(draw, x0, y0, w, h):
-    """Stylised Türkiye with Antalya pin and the draft-text box."""
+    """Türkiye with a readable coastline: Black Sea north, Mediterranean
+    south with the Antalya bay, Aegean notches west. The draft-text box is
+    a single line at the bottom so the map (and the Antalya pin) stay
+    visible. Everything stays inside (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
-    poly = [(0.05, 0.28), (0.22, 0.12), (0.45, 0.08), (0.68, 0.12), (0.88, 0.18),
-            (0.95, 0.38), (0.86, 0.55), (0.68, 0.68), (0.48, 0.72), (0.28, 0.66),
-            (0.12, 0.58), (0.04, 0.42)]
+    poly = [(0.03, 0.36), (0.05, 0.26), (0.08, 0.19), (0.15, 0.16),
+            (0.25, 0.15), (0.35, 0.17), (0.45, 0.15), (0.55, 0.17),
+            (0.65, 0.15), (0.75, 0.17), (0.85, 0.19), (0.93, 0.23),
+            (0.96, 0.29), (0.95, 0.36), (0.90, 0.44), (0.82, 0.50),
+            (0.74, 0.54), (0.66, 0.58), (0.58, 0.54), (0.50, 0.50),
+            (0.42, 0.48), (0.34, 0.46), (0.26, 0.44), (0.18, 0.42),
+            (0.10, 0.40), (0.06, 0.38), (0.08, 0.34), (0.04, 0.32)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
     draw.polygon(pts, fill=LAND2, outline=INK)
-    draw.text((x0 + 6, y0 + 4), "TÜRKIYE", font=font(SANSB, 9), fill=INK)
-    draw.text((x0 + w - 52, y0 + 4), "ANTALYA", font=font(SANSB, 8), fill=RED)
-    # Antalya pin on the south coast
-    ax, ay = x0 + 0.38 * w, y0 + 0.66 * h
-    draw.ellipse([ax - 6, ay - 6, ax + 6, ay + 6], fill=RED, outline=(255, 255, 255), width=1)
-    # sea label
-    draw.text((x0 + 8, y0 + h - 16), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
-    # draft-text box
-    bx, by = x0 + 6, y0 + h - 44
-    draw.rectangle([bx, by, x0 + w - 6, y0 + h - 6], fill=(255, 255, 255), outline=RED, width=1)
-    draw.text((bx + 5, by + 3), "DRAFT TEXT:", font=font(SANSB, 8), fill=RED)
-    draw.text((bx + 5, by + 15), "fossil fuels NOT MENTIONED", font=font(SANSB, 9), fill=INK)
-    draw.text((bx + 5, by + 27), "→ NO DEAL", font=font(SANSB, 9), fill=RED)
+    draw.text((x0 + 6, y0 + 1), "TÜRKIYE", font=font(SANSB, 9), fill=INK)
+    draw.text((x0 + 118, y0 + 1), "BLACK SEA", font=font(SANS, 7), fill=BLUE2)
+    # Antalya pin on the south coast, at the bay dip
+    ax, ay = x0 + 0.66 * w, y0 + 0.58 * h
+    draw.ellipse([ax - 5, ay - 5, ax + 5, ay + 5], fill=RED, outline=(255, 255, 255), width=1)
+    draw.text((ax + 8, y0 + 38), "ANTALYA", font=font(SANSB, 8), fill=RED)
+    draw.text((x0 + 6, y0 + 39), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
+    # draft-text box: one line, bottom
+    bx, by = x0 + 6, y0 + h - 14
+    draw.rectangle([bx, by, x0 + w - 6, y0 + h - 3], fill=(255, 255, 255), outline=RED, width=1)
+    draw.text((bx + 5, by + 2), "DRAFT TEXT: ", font=font(SANSB, 8), fill=RED)
+    tx = bx + 5 + draw.textlength("DRAFT TEXT: ", font=font(SANSB, 8))
+    draw.text((tx, by + 2), "fossil fuels NOT MENTIONED  →  NO DEAL",
+              font=font(SANSB, 8), fill=INK)
 
 
 def draw_libya(draw, x0, y0, w, h):
-    """Stylised Libya / Mediterranean with burning ship and arrow.
-    Everything stays inside the box (x0, y0, w, h)."""
+    """Libya / Mediterranean: sea on top, land below with the Gulf of
+    Sidra dip, a BIG burning warship offshore in the sea, red SEA DRONE
+    arrow, Benghazi pin on the north-east coast. Everything stays inside
+    the box (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
-    poly = [(0.08, 0.30), (0.30, 0.22), (0.55, 0.20), (0.85, 0.24), (0.92, 0.45),
-            (0.80, 0.72), (0.62, 0.88), (0.38, 0.86), (0.18, 0.68), (0.06, 0.50)]
+    # land: north coast with the Sidra gulf dip, extends past the bottom
+    poly = [(0.02, 0.48), (0.10, 0.44), (0.20, 0.42), (0.30, 0.44),
+            (0.40, 0.50), (0.48, 0.54), (0.55, 0.50), (0.62, 0.45),
+            (0.70, 0.42), (0.78, 0.40), (0.86, 0.42), (0.94, 0.44),
+            (0.98, 0.55), (0.98, 1.0), (0.0, 1.0), (0.0, 0.52)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
     draw.polygon(pts, fill=LAND2, outline=INK)
-    draw.text((x0 + 6, y0 + 3), "LIBYA", font=font(SANSB, 9), fill=INK)
-    draw.text((x0 + 6, y0 + h - 13), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
-    # Benghazi pin, north-east coast
-    bx, by = x0 + 0.80 * w, y0 + 0.30 * h
+    draw.text((x0 + 6, y0 + 2), "SEA DRONE", font=font(SANSB, 7), fill=RED)
+    draw.text((x0 + w - 100, y0 + 2), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
+    draw.text((x0 + 8, y0 + 44), "LIBYA", font=font(SANSB, 9), fill=INK)
+    # Benghazi pin on the north-east coast
+    bx, by = x0 + 0.70 * w, y0 + 0.42 * h
     draw.ellipse([bx - 5, by - 5, bx + 5, by + 5], fill=RED, outline=(255, 255, 255), width=1)
-    draw.text((bx - 30, by - 13), "BENGHAZI", font=font(SANSB, 7), fill=RED)
-    # burning ship offshore, upper middle of the box
-    sx, sy = x0 + 0.45 * w, y0 + 0.42 * h
-    draw.polygon([(sx - 14, sy + 3), (sx + 14, sy + 3), (sx + 9, sy + 10), (sx - 9, sy + 10)],
-                 fill=INK)
-    draw.rectangle([sx - 6, sy - 5, sx + 6, sy + 3], fill=GREY)
-    for dx, dy in [(-5, -11), (0, -14), (5, -10)]:
-        draw.line([(sx, sy - 5), (sx + dx, sy + dy)], fill=RED, width=2)
-    draw.ellipse([sx - 4, sy - 11, sx + 4, sy - 3], fill=(240, 180, 40), outline=RED)
-    # red arrow: drone path to the ship, inside the box
-    draw.line([(sx - 34, sy - 16), (sx - 8, sy - 6)], fill=RED, width=2)
-    draw.polygon([(sx - 8, sy - 6), (sx - 16, sy - 10), (sx - 13, sy - 1)], fill=RED)
-    draw.text((sx - 40, sy - 26), "SEA DRONE", font=font(SANSB, 7), fill=RED)
+    draw.text((bx + 8, y0 + 20), "BENGHAZI", font=font(SANSB, 7), fill=RED)
+    # BIG burning warship offshore, in the sea above the coast
+    sx, sy = x0 + 0.45 * w, y0 + 20
+    # smoke puffs above the fire
+    draw.ellipse([sx - 5, sy - 19, sx + 1, sy - 14], fill=(120, 115, 105))
+    draw.ellipse([sx + 1, sy - 18, sx + 7, sy - 13], fill=(140, 135, 125))
+    # fire: orange core + red flame lines
+    draw.ellipse([sx - 5, sy - 15, sx + 5, sy - 7], fill=(240, 180, 40), outline=RED)
+    for dx, dy in [(-6, -17), (0, -18), (6, -16)]:
+        draw.line([(sx, sy - 9), (sx + dx, sy + dy)], fill=RED, width=2)
+    # superstructure + funnel + mast
+    draw.rectangle([sx - 9, sy - 9, sx + 9, sy - 3], fill=GREY)
+    draw.rectangle([sx - 13, sy - 7, sx - 7, sy - 3], fill=(60, 60, 60))
+    draw.line([(sx + 5, sy - 9), (sx + 5, sy - 15)], fill=INK, width=2)
+    # hull: dark, wider than tall
+    draw.polygon([(sx - 17, sy - 3), (sx + 17, sy - 3), (sx + 12, sy + 6),
+                  (sx - 12, sy + 6)], fill=INK)
+    draw.line([(sx - 17, sy - 3), (sx + 17, sy - 3)], fill=(255, 255, 255), width=1)
+    # waves under the hull
+    for wy in (sy + 8, sy + 11):
+        draw.line([(sx - 20, wy), (sx - 10, wy - 2), (sx, wy), (sx + 10, wy - 2),
+                   (sx + 20, wy)], fill=BLUE2, width=1)
+    # red arrow: drone path to the ship, from the upper left
+    draw.line([(x0 + 30, y0 + 10), (sx - 19, sy - 7)], fill=RED, width=2)
+    draw.polygon([(sx - 19, sy - 7), (sx - 27, sy - 11), (sx - 24, sy - 2)], fill=RED)
 
 
 def draw_house_chart(draw, x0, y0, w, h):
@@ -426,11 +554,33 @@ def draw_house_chart(draw, x0, y0, w, h):
     Everything stays inside the box (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
     draw.text((x0 + 6, y0 + 3), "US HOUSE  ·  435 SEATS", font=font(SANSB, 9), fill=INK)
-    # Capitol dome, small, top right
-    cx, cy = x0 + w - 34, y0 + 24
-    draw.rectangle([cx - 22, cy, cx + 22, cy + 9], fill=(255, 255, 255), outline=INK)
-    draw.ellipse([cx - 10, cy - 10, cx + 10, cy + 1], fill=(255, 255, 255), outline=INK)
-    draw.line([(cx, cy - 14), (cx, cy - 10)], fill=INK, width=2)
+    # Capitol dome, BIG and detailed, top right: columned base, drum,
+    # ribbed dome, lantern + finial. Base sits just above the bar
+    # (bar top = y0+32).
+    cx = x0 + w - 32
+    base_top = y0 + 24
+    # dome: smooth half-ellipse polygon (offsets from cx, base_top)
+    dome = [(-17, -6), (-16, -10), (-13, -14), (-9, -16), (-5, -18),
+            (0, -18), (5, -18), (9, -16), (13, -14), (16, -10), (17, -6)]
+    draw.polygon([(cx + dx, base_top + dy) for dx, dy in dome],
+                 fill=(255, 255, 255), outline=INK)
+    # ribs on the dome
+    for dx, top in [(-11, -15), (-6, -17), (0, -18), (6, -17), (11, -15)]:
+        draw.line([(cx + dx, base_top + top), (cx + dx, base_top - 7)],
+                  fill=GREY, width=1)
+    # lantern + finial
+    draw.rectangle([cx - 4, base_top - 22, cx + 4, base_top - 18],
+                   fill=(255, 255, 255), outline=INK)
+    draw.ellipse([cx - 2, base_top - 24, cx + 2, base_top - 22], fill=INK)
+    # drum
+    draw.rectangle([cx - 13, base_top - 6, cx + 13, base_top],
+                   fill=(255, 255, 255), outline=INK)
+    # base with columns
+    draw.rectangle([cx - 24, base_top, cx + 24, base_top + 8],
+                   fill=(255, 255, 255), outline=INK)
+    for dx in (-18, -12, -6, 0, 6, 12, 18):
+        draw.line([(cx + dx, base_top + 1), (cx + dx, base_top + 7)],
+                  fill=GREY, width=1)
     # stacked bar
     bx, by, bw, bh = x0 + 10, y0 + 32, w - 20, 15
     dem_w = bw * 258 / 435
