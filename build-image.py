@@ -10,9 +10,10 @@ world map "WHERE IT HAPPENED" -> "ALSO ON" 23 small stories -> DATE CHECK
 """
 import hashlib
 import os
+import random
 import sys
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 W, H = 1024, 1024
 PAPER = (245, 239, 224)      # cream paper
@@ -191,6 +192,74 @@ def _stipple(draw, pts, dot, step=9):
             jy = ((gx * 11 + gy * 3) % 5) - 2
             if _inside(gx + jx, gy + jy, pts):
                 draw.point((gx + jx, gy + jy), fill=dot)
+
+
+# ---------------------------------------------------------------- v6 organic
+# Hand-drawn feel: seeded jitter on polygon points, pen-stroke outlines
+# with varying width, watercolor washes, paper grain. All deterministic:
+# every jitter/noise draw uses its own random.Random(seed) — never the
+# global random module, never the clock — so two runs are byte-identical.
+def _jitter_pts(pts, amp, seed):
+    """Return polygon points shifted by a seeded uniform jitter in
+    [-amp, amp] px. Same seed -> same output. Amplitude 2-4px is enough
+    to kill the "ruler" look without the shape becoming unrecognisable."""
+    rng = random.Random(seed)
+    return [(x + rng.uniform(-amp, amp), y + rng.uniform(-amp, amp))
+            for x, y in pts]
+
+
+def _hand_outline(draw, pts, col, seed, closed=True):
+    """Pen-stroke outline: a continuous 1px base line (so there are no
+    joint gaps), then ~35% of the segments redrawn at 2px for pen
+    pressure variation. Reads as a hand-drawn stroke, not a ruler line."""
+    rng = random.Random(seed)
+    n = len(pts)
+    if closed:
+        pairs = [(pts[i], pts[(i + 1) % n]) for i in range(n)]
+    else:
+        pairs = [(pts[i], pts[i + 1]) for i in range(n - 1)]
+    for a, b in pairs:
+        draw.line([a, b], fill=col, width=1)
+    for a, b in pairs:
+        if rng.random() < 0.35:
+            draw.line([a, b], fill=col, width=2)
+
+
+def _watercolor(img, pts, color, alpha=40, seed=7, layers=2):
+    """Fill a polygon with 2 translucent washes, each shifted a few px
+    (seeded) — like watercolor over the flat fill. The wash is clipped
+    to the original polygon so nothing spills past the edge."""
+    rng = random.Random(seed)
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).polygon(pts, fill=255)
+    base = img.convert("RGBA")
+    for _ in range(layers):
+        dx = rng.uniform(-2.5, 2.5)
+        dy = rng.uniform(-2.5, 2.5)
+        layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ld = ImageDraw.Draw(layer)
+        ld.polygon([(x + dx, y + dy) for x, y in pts], fill=color + (alpha,))
+        la = ImageChops.multiply(layer.split()[3], mask)
+        layer.putalpha(la)
+        base = Image.alpha_composite(base, layer)
+    img.paste(base.convert("RGB"), (0, 0))
+
+
+def _paper_grain(img, seed=42, dots=3500, alpha=10):
+    """Very subtle deterministic grain over the whole page — a few
+    thousand 1px dots at ~4% alpha. Gives a paper feel at full size;
+    invisible at 300px, and far too faint to hurt text crispness."""
+    rng = random.Random(seed)
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ld = ImageDraw.Draw(layer)
+    for _ in range(dots):
+        x = rng.uniform(0, img.size[0] - 1)
+        y = rng.uniform(0, img.size[1] - 1)
+        v = (0, 0, 0) if rng.random() < 0.6 else (255, 255, 255)
+        ld.point((x, y), fill=v + (alpha,))
+    base = img.convert("RGBA")
+    out = Image.alpha_composite(base, layer)
+    img.paste(out.convert("RGB"), (0, 0))
 
 
 # ---------------------------------------------------------------- data
@@ -526,12 +595,22 @@ WORLD_POLYS = [
 ]
 
 
-def draw_world_map(draw, x0, y0, w, h):
+def draw_world_map(img, draw, x0, y0, w, h):
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=SEA, outline=INK, width=1)
-    for poly in WORLD_POLYS:
+    for pi, poly in enumerate(WORLD_POLYS):
         pts = [world_xy(lat, lon, x0, y0, w, h) for lon, lat in poly]
+        # v6: wavy coastline — seeded jitter (smaller islands get a
+        # smaller amplitude so they keep their shape), watercolor wash,
+        # and a pen-stroke outline instead of the ruler line
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        big = max(max(xs) - min(xs), max(ys) - min(ys)) > 60
+        amp = 2.5 if big else 1.5
+        pts = _jitter_pts(pts, amp, 100 + pi)
         # darker land + darker coastline so continents pop off the sea
-        draw.polygon(pts, fill=(212, 196, 152), outline=(105, 95, 68))
+        draw.polygon(pts, fill=(212, 196, 152))
+        _watercolor(img, pts, (196, 178, 132), alpha=35, seed=300 + pi)
+        _hand_outline(draw, pts, (105, 95, 68), seed=400 + pi)
         # v5: very subtle dot texture on the land (reads as paper grain,
         # not noise) — drawn before graticule/pins so they stay crisp
         _stipple(draw, pts, (192, 174, 128), step=9)
@@ -583,6 +662,10 @@ def draw_turkiye(img, draw, x0, y0, w, h):
             (0.42, 0.48), (0.34, 0.46), (0.26, 0.44), (0.18, 0.42),
             (0.10, 0.40), (0.06, 0.38), (0.08, 0.34), (0.04, 0.32)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
+    # v6: wavy coastline (seeded jitter, 2.5px — the map stops looking
+    # geometric but keeps its shape), a watercolor wash over the land,
+    # and a pen-stroke outline instead of the ruler line
+    pts = _jitter_pts(pts, 2.5, 201)
     # v5: soft shadow under the map (drawn first, land covers the
     # overlap, only the fringe shows on the sea) + subtle vertical
     # gradient on the land (brighter at the top, a touch darker below)
@@ -590,7 +673,8 @@ def draw_turkiye(img, draw, x0, y0, w, h):
     # as a shape, not a pale silhouette
     _soft_shadow(img, pts, offset=(3, 5), blur=5, alpha=55)
     _poly_gradient(img, pts, (212, 184, 136), (198, 166, 112))
-    draw.polygon(pts, fill=None, outline=INK)
+    _watercolor(img, pts, (186, 156, 106), alpha=40, seed=211)
+    _hand_outline(draw, pts, INK, seed=221)
     _stipple(draw, pts, (186, 156, 106), step=9)
     draw.text((x0 + 6, y0 + 1), "TÜRKIYE", font=font(SANSB, 9), fill=INK)
     draw.text((x0 + 100, y0 + 1), "BLACK SEA", font=font(SANS, 7), fill=BLUE2)
@@ -651,6 +735,10 @@ def draw_libya(img, draw, x0, y0, w, h):
     # v5: subtle vertical gradient on the sea (lighter at the top,
     # deeper below) instead of a flat fill
     _rect_gradient(img, x0, y0, w, h, (230, 236, 241), (198, 212, 226))
+    # v6: a faint watercolor wash over the sea (clipped to the box) so
+    # the water has variation like a wash, not a flat screen fill
+    _watercolor(img, [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)],
+                (150, 180, 200), alpha=25, seed=212)
     draw.rectangle([x0, y0, x0 + w, y0 + h], outline=INK, width=1)
     # land: north coast lower than v3 (more sea room for the ship +
     # smoke), with the Sidra gulf dip; extends past the bottom
@@ -660,7 +748,12 @@ def draw_libya(img, draw, x0, y0, w, h):
             (0.86, 0.56), (0.90, 0.60), (0.94, 0.58),
             (0.98, 0.68), (0.98, 1.0), (0.0, 1.0), (0.0, 0.66)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
-    draw.polygon(pts, fill=LAND2, outline=INK)
+    # v6: wavy coastline (seeded jitter, 2.5px) + watercolor wash +
+    # pen-stroke coastline instead of the ruler line
+    pts = _jitter_pts(pts, 2.5, 202)
+    draw.polygon(pts, fill=LAND2)
+    _watercolor(img, pts, (194, 182, 148), alpha=35, seed=213)
+    _hand_outline(draw, pts, INK, seed=222)
     # v5: very subtle dot texture on the land
     _stipple(draw, pts, (194, 182, 148), step=9)
     draw.text((x0 + 6, y0 + 2), "SEA DRONE", font=font(SANSB, 7), fill=RED)
@@ -714,9 +807,13 @@ def draw_libya(img, draw, x0, y0, w, h):
     draw.rectangle([sx - 42, sy - 16, sx - 30, sy - 6], fill=(60, 60, 60))
     draw.line([(sx + 22, sy - 20), (sx + 22, sy - 36)], fill=INK, width=2)
     # hull: dark, 120px wide — v5: thin grey highlight just under the
-    # white waterline so the hull has a lit edge
-    draw.polygon([(sx - 60, sy - 6), (sx + 60, sy - 6), (sx + 48, sy + 10),
-                  (sx - 48, sy + 10)], fill=INK)
+    # white waterline so the hull has a lit edge. v6: the four hull
+    # vertices are jittered 1.5px (seeded) so the hull edge is rough,
+    # not ruler-straight
+    hull = [(sx - 60, sy - 6), (sx + 60, sy - 6), (sx + 48, sy + 10),
+            (sx - 48, sy + 10)]
+    hull = _jitter_pts(hull, 1.5, 203)
+    draw.polygon(hull, fill=INK)
     draw.line([(sx - 60, sy - 6), (sx + 60, sy - 6)], fill=(255, 255, 255), width=1)
     draw.line([(sx - 56, sy - 3), (sx + 56, sy - 3)], fill=(110, 110, 110), width=2)
     # waves under the hull (in the sea, just above the coast)
@@ -757,8 +854,12 @@ def draw_house_chart(img, draw, x0, y0, w, h):
     dome = [(-30, -10), (-29, -18), (-24, -25), (-16, -30), (-9, -32),
             (0, -32), (9, -32), (16, -30), (24, -25), (29, -18), (30, -10)]
     dome_pts = [(cx + dx, base_top + dy) for dx, dy in dome]
+    # v6: the dome outline is jittered 1px (seeded) and drawn as a
+    # pen stroke — the dome stops looking stamped and starts looking
+    # drawn
+    dome_pts = _jitter_pts(dome_pts, 1.0, 204)
     _poly_gradient(img, dome_pts, (255, 255, 255), (224, 229, 237), horizontal=True)
-    draw.polygon(dome_pts, fill=None, outline=INK)
+    _hand_outline(draw, dome_pts, INK, seed=224)
     # ribs on the dome
     for dx, top in [(-20, -28), (-10, -31), (0, -32), (10, -31), (20, -28)]:
         draw.line([(cx + dx, base_top + top), (cx + dx, base_top - 11)],
@@ -929,7 +1030,7 @@ def render():
     y = 604
     d.text((MX, y), "WHERE IT HAPPENED  ·  PINS 1–13  (13 = IN ORBIT)",
            font=font(SANSB, 10), fill=INK)
-    draw_world_map(d, MX, y + 15, RX - MX, 160)
+    draw_world_map(img, d, MX, y + 15, RX - MX, 160)
 
     # ---- ALSO ON ----
     y = 785
@@ -994,6 +1095,9 @@ def render():
            "Sources: AP, Reuters, AFP, BBC, USGS, ESA, IMD, UKMTO, NEMA, WHO. "
            "All maps and drawings are original vector work, no photographs.",
            font=font(SANS, 8), fill=GREY)
+    # v6: very subtle paper grain over the whole page (last step, so it
+    # touches everything equally and stays faint)
+    _paper_grain(img)
     return img
 
 
