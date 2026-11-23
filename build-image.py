@@ -4,10 +4,10 @@
 One image, 1024x1024, PIL only, fully deterministic (no network, no clock,
 no unseeded randomness). Writes entry.png next to this script.
 Layout follows the proven winner template: masthead -> UTC strip -> numbers
-strip -> 3 big photo leads -> 10 medium photo cards (v11: full-width photo
-banner on top, like the top entries) -> region bar -> world map
-"WHERE IT HAPPENED" -> "ALSO ON" 23 small stories -> DATE CHECK -> HOW
-SURE -> footer. 36 stories, 6 regions.
+strip -> 3 big photo leads -> 33 photo cards in ONE unified 6x6 grid
+(v12: every story gets a clear visual tile) -> region bar -> world map
+"WHERE IT HAPPENED" -> DATE CHECK -> HOW SURE -> footer. 36 stories,
+6 regions.
 """
 import hashlib
 import math
@@ -237,6 +237,20 @@ MED_PHOTOS = {4: "med4-dymer.jpg", 5: "med5-sparta.jpg", 6: "med6-missiles.jpg",
               7: "med7-market.jpg", 8: "med8-f1.jpg", 9: "med9-quake.jpg",
               10: "med10-storm.jpg", 11: "med11-factory.jpg", 12: "med12-ebola.jpg",
               13: "med13-mercury.jpg"}
+# v12: one photo per ALSO ON story (14-36), same photorealistic style.
+SMALL_PHOTOS = {14: "also14-trump-eo.jpg", 15: "also15-fbi-hack.jpg",
+                16: "also16-spacex-campus.jpg", 17: "also17-anthropic-ipo.jpg",
+                18: "also18-lng.jpg", 19: "also19-argentina-risk.jpg",
+                20: "also20-missile-debris.jpg", 21: "also21-parliament.jpg",
+                22: "also22-eu.jpg", 23: "also23-blockade.jpg",
+                24: "also24-bahrain-fire.jpg", 25: "also25-hormuz.jpg",
+                26: "also26-gaza.jpg", 27: "also27-boat.jpg",
+                28: "also28-khartoum.jpg", 29: "also29-migrant-boat.jpg",
+                30: "also30-summit.jpg", 31: "also31-cyclone.jpg",
+                32: "also32-beijing.jpg", 33: "also33-dhaka.jpg",
+                34: "also34-xavier.jpg", 35: "also35-un-ai.jpg",
+                36: "also36-minimoon.jpg"}
+SMALL_FOCUS = {}  # default (0.5, 0.5) for every small photo
 # Focus point of the center crop (fraction of source size). Lead 3's dome
 # sits at the top of its frame, so bias the crop upward; med 12's subject
 # stands on the right; med 9's house is right of centre; med 4's building
@@ -248,15 +262,19 @@ MED_FOCUS = {4: (0.45, 0.5), 5: (0.5, 0.5), 6: (0.5, 0.5), 7: (0.5, 0.5),
 _photo_cache = {}
 
 
-def _cover(num, w, h, lead=True):
+def _cover(num, w, h, lead=True, small=False):
     """Load a photo, center-crop it to the target aspect ratio around its
     focus point, and LANCZOS-resize to (w, h). Results are cached so each
     file is read once per run."""
-    key = (num, w, h, lead)
+    key = (num, w, h, lead, small)
     if key in _photo_cache:
         return _photo_cache[key]
-    fname = (LEAD_PHOTOS if lead else MED_PHOTOS)[num]
-    focus = (LEAD_FOCUS if lead else MED_FOCUS)[num]
+    if small:
+        fname = SMALL_PHOTOS[num]
+        focus = SMALL_FOCUS.get(num, (0.5, 0.5))
+    else:
+        fname = (LEAD_PHOTOS if lead else MED_PHOTOS)[num]
+        focus = (LEAD_FOCUS if lead else MED_FOCUS)[num]
     src = Image.open(os.path.join(_PHOTO_DIR, fname)).convert("RGB")
     sw, sh = src.size
     target = w / h
@@ -330,30 +348,32 @@ MEDIUM = [
 # v4: cut 8 least-significant stories (minor sports score, minor arrests,
 # small local protest, local transport disruption, animal birth, minor
 # resignation) to free ~44px for bigger lead illustrations.
+# v12: headlines shortened to fit the 8x3 photo grid (2 lines at 8pt in
+# ~111px, ~40 chars max) — same facts, front-page headline style.
 SMALL = [
-    (14, "WASHINGTON", "Trump signs EO 14438: contractors must consult the White House.", "AP"),
-    (15, "WASHINGTON", "Trump confirms the FBI crime database was hacked.", "Reuters"),
-    (16, "ARIZONA", "SpaceX's $74bn AI campus stalls in a power-bill dispute (6,000 MW).", "Fortune"),
-    (17, "NEW YORK", "Anthropic's IPO sparks a Wall Street row over unusual deal limits.", "Reuters"),
-    (18, "ARGENTINA", "$50bn LNG project approved.", "Reuters"),
-    (19, "ARGENTINA", "Country risk hits 1,070, the highest of 2026.", "JPMorgan"),
-    (20, "POLAND", "Kh-101 missile debris found at three sites.", "Reuters"),
-    (21, "LONDON", "Conservatives vow to scrap the UK–EU deal.", "Reuters"),
-    (22, "BRUSSELS", "EU's Costa proposes €204bn in savings and a digital tax.", "Handelsblatt"),
-    (23, "TEHRAN", "Trump dares Iran to break the US port blockade.", "AP"),
-    (24, "SITRA, BAHRAIN", "Iranian attack on a civilian industrial site causes a fire; 2 hurt.", "Reuters"),
-    (25, "STRAIT OF HORMUZ", "Iran hits three tankers; UKMTO reports a vessel incident.", "UKMTO"),
-    (26, "GAZA CITY", "Israeli strike on a food van kills 3.", "AP"),
-    (27, "BAYELSA, NIGERIA", "Death toll from a capsized mourners' boat rises to 26.", "Reuters"),
-    (28, "KHARTOUM", "Drones hit homes and a UN building in Khartoum.", "OCHA"),
-    (29, "ATLANTIC", "Migrant boat capsizes off Senegal; 39 dead.", "Reuters"),
-    (30, "OYO, CONGO", "Kenya and DR Congo restore full diplomatic ties at a summit.", "Reuters"),
-    (31, "ODISHA, INDIA", "Cyclone Akvan weakens to a depression; 300,000+ evacuated.", "IMD"),
-    (32, "BEIJING", "China–Japan ties worsen over Taiwan and critical minerals.", "Reuters"),
-    (33, "DHAKA", "Deadly protests over the exiled former leader.", "Reuters"),
-    (34, "COOK ISLANDS", "Cyclone Xavier weakens to Category 1; emergency status stays.", "MetService"),
-    (35, "GENEVA", "UN talks on AI weapons end with no binding rules.", "AFP"),
-    (36, "ORBIT", "Earth gains a 'mini-moon', 2026 QQ8, a 2-metre asteroid.", "CNN"),
+    (14, "WASHINGTON", "Trump signs EO 14438 on contractors", "AP"),
+    (15, "WASHINGTON", "Trump: FBI crime database hacked", "Reuters"),
+    (16, "ARIZONA", "SpaceX $74bn AI campus stalls", "Fortune"),
+    (17, "NEW YORK", "Anthropic IPO sparks Wall St row", "Reuters"),
+    (18, "ARGENTINA", "Argentina approves $50bn LNG plan", "Reuters"),
+    (19, "ARGENTINA", "Argentina risk hits 1,070 in 2026", "JPMorgan"),
+    (20, "POLAND", "Kh-101 debris found in Poland", "Reuters"),
+    (21, "LONDON", "Tories vow to scrap UK–EU deal", "Reuters"),
+    (22, "BRUSSELS", "EU proposes €204bn savings plan", "Handelsblatt"),
+    (23, "TEHRAN", "Trump dares Iran over port blockade", "AP"),
+    (24, "SITRA, BAHRAIN", "Iran attack on Bahrain site: 2 hurt", "Reuters"),
+    (25, "STRAIT OF HORMUZ", "Iran hits three tankers in Hormuz", "UKMTO"),
+    (26, "GAZA CITY", "Strike on Gaza food van kills 3", "AP"),
+    (27, "BAYELSA, NIGERIA", "Boat capsize toll rises to 26", "Reuters"),
+    (28, "KHARTOUM", "Drones hit UN site in Khartoum", "OCHA"),
+    (29, "ATLANTIC", "Boat sinks off Senegal: 39 dead", "Reuters"),
+    (30, "OYO, CONGO", "Kenya, DR Congo restore full ties", "Reuters"),
+    (31, "ODISHA, INDIA", "Akvan weakens; 300,000 moved", "IMD"),
+    (32, "BEIJING", "China–Japan ties worsen over Taiwan", "Reuters"),
+    (33, "DHAKA", "Deadly Dhaka protests over ex-leader", "Reuters"),
+    (34, "COOK ISLANDS", "Cyclone Xavier weakens to Cat 1", "MetService"),
+    (35, "GENEVA", "UN AI-weapons talks: no rules", "AFP"),
+    (36, "ORBIT", "Earth gains a 'mini-moon', 2026 QQ8", "CNN"),
 ]
 
 UTC_STRIP = [
@@ -529,7 +549,7 @@ WORLD_POLYS = [
 ]
 
 
-def draw_world_map(img, draw, x0, y0, w, h):
+def draw_world_map(img, draw, x0, y0, w, h, pin_r=8, pin_font=9):
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=SEA, outline=INK, width=1)
     # v7: richer sea — two watercolor washes over the whole map rect
     # (drawn before the land so the continents cover them)
@@ -564,7 +584,7 @@ def draw_world_map(img, draw, x0, y0, w, h):
     _, eq = world_xy(0, 0, x0, y0, w, h)
     draw.line([(x0, eq), (x0 + w, eq)], fill=(175, 198, 218), width=1)
     # pins 1-12
-    f = font(SANSB, 9)
+    f = font(SANSB, pin_font)
     for num, (lat, lon) in sorted(PINS.items()):
         if lat is None:
             continue
@@ -574,7 +594,7 @@ def draw_world_map(img, draw, x0, y0, w, h):
             draw.line([(px, py), (px + dx, py + dy)], fill=RED, width=1)
             draw.ellipse([px - 2, py - 2, px + 2, py + 2], fill=RED)
             px, py = px + dx, py + dy
-        r = 8
+        r = pin_r
         draw.ellipse([px - r, py - r, px + r, py + r], fill=RED, outline=(255, 255, 255), width=1)
         t = str(num)
         twd = draw.textlength(t, font=f)
@@ -615,30 +635,31 @@ def render():
     rule(d, MX, RX, y, INK, 2)
     rule(d, MX, RX, y + 3, INK, 1)
 
-    # ---- THE DAY IN UTC ----
+    # ---- THE DAY IN UTC (v12: 34px) ----
     y = 81
-    d.rectangle([MX, y, RX, y + 38], fill=PAPER2, outline=INK, width=1)
+    d.rectangle([MX, y, RX, y + 34], fill=PAPER2, outline=INK, width=1)
     d.text((MX + 6, y + 2), "THE DAY IN UTC", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 7.0
     for i, (t, txt) in enumerate(UTC_STRIP):
         x = MX + 6 + i * col_w
-        d.text((x, y + 12), t, font=font(SANSB, 11), fill=RED)
-        para(d, x, y + 26, txt, font(SANS, 8), INK, col_w - 6, lh=9, max_lines=1)
+        d.text((x, y + 11), t, font=font(SANSB, 11), fill=RED)
+        para(d, x, y + 23, txt, font(SANS, 8), INK, col_w - 6, lh=9, max_lines=1)
 
-    # ---- THE DAY IN NUMBERS ----
-    y = 125
-    d.rectangle([MX, y, RX, y + 46], fill=(255, 255, 255), outline=INK, width=1)
+    # ---- THE DAY IN NUMBERS (v12: 42px) ----
+    y = 121
+    d.rectangle([MX, y, RX, y + 42], fill=(255, 255, 255), outline=INK, width=1)
     d.text((MX + 6, y + 3), "THE DAY IN NUMBERS", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 6.0
     for i, (num, txt) in enumerate(NUMBERS):
         x = MX + 6 + i * col_w
-        d.text((x, y + 15), num, font=font(SERIFB, 17), fill=INK)
-        para(d, x, y + 33, txt, font(SANS, 8), GREY, col_w - 6, lh=9, max_lines=2)
+        d.text((x, y + 14), num, font=font(SERIFB, 17), fill=INK)
+        para(d, x, y + 30, txt, font(SANS, 8), GREY, col_w - 6, lh=9, max_lines=2)
 
     # ---- 3 big leads (v10: PHOTO on top, then kicker + headline + deck
-    # below — like the reference front page) ----
-    y = 177
-    lead_h = 236
+    # below — like the reference front page; v12: 216px tall, photo 106px
+    # to fund the photo grid) ----
+    y = 171
+    lead_h = 216
     col_w = (RX - MX - 12) / 3.0
     for i, (num, kick, head, deck, src, conf) in enumerate(LEADS):
         x = MX + i * (col_w + 6)
@@ -646,53 +667,63 @@ def render():
         # opaque paper fill covers the overlap, only the fringe shows)
         _rect_shadow(img, x, y, x + col_w, y + lead_h)
         d.rectangle([x, y, x + col_w, y + lead_h], fill=PAPER, outline=INK, width=1)
-        # photo: full column width, 124px tall, on top
-        ph = _cover(num, int(col_w) - 2, 124, lead=True)
+        # photo: full column width, 106px tall, on top
+        ph = _cover(num, int(col_w) - 2, 106, lead=True)
         img.paste(ph, (int(x) + 1, y + 1))
-        d.rectangle([x + 1, y + 1, x + col_w - 1, y + 125], outline=INK, width=1)
+        d.rectangle([x + 1, y + 1, x + col_w - 1, y + 107], outline=INK, width=1)
         # kicker (red) + confidence badge, below the photo
-        ky = y + 131
+        ky = y + 113
         d.text((x + 6, ky), f"#{num}  {kick}", font=font(SANSB, 9), fill=RED)
         badge(d, x + col_w - 62, ky - 1, conf)
         # headline (18pt so the longest one fits the column)
-        d.text((x + 6, y + 146), head, font=font(SERIFB, 18), fill=INK)
+        d.text((x + 6, y + 128), head, font=font(SERIFB, 18), fill=INK)
         # deck, 3 lines max
-        para(d, x + 6, y + 170, deck, font(SANS, 10), INK, col_w - 12, lh=12,
+        para(d, x + 6, y + 152, deck, font(SANS, 10), INK, col_w - 12, lh=12,
              max_lines=3)
         # source
         sy = y + lead_h - 16
         d.text((x + 6, sy + 2), src, font=font(SANS, 8), fill=GREY)
 
-    # ---- 10 medium cards, 2 rows of 5 (v11: PHOTO BANNER on top, like
-    # the top entries — full-width banner, then kicker + headline + deck
-    # below; the tiny left thumbnail is gone) ----
-    y = 419
-    card_w = (RX - MX - 16) / 5.0
-    card_h = 106
-    for row in range(2):
-        for col in range(5):
-            m = MEDIUM[row * 5 + col]
-            num, kick, head, deck, src, conf, _ic = m
-            x = MX + col * (card_w + 4)
-            yy = y + row * (card_h + 3)
-            d.rectangle([x, yy, x + card_w, yy + card_h], fill=(255, 255, 255),
-                        outline=LINE, width=1)
-            # photo banner: full card width, 50px tall, on top
-            ph = _cover(num, int(card_w) - 2, 50, lead=False)
-            img.paste(ph, (int(x) + 1, yy + 1))
-            d.rectangle([x + 1, yy + 1, x + card_w - 1, yy + 51], outline=LINE, width=1)
-            # confidence badge over the banner's top-right corner
-            badge(d, x + card_w - 62, yy + 3, conf)
-            # kicker, headline (2 lines), deck (2 lines); per-card source
-            # dropped in v11 — outlets are credited in the footer
-            d.text((x + 5, yy + 54), f"{num}  {kick}", font=font(SANSB, 7), fill=RED)
-            para(d, x + 5, yy + 64, head, font(SANSB, 10), INK, card_w - 10, lh=11,
-                 max_lines=2)
-            para(d, x + 5, yy + 86, deck, font(SANS, 8), INK, card_w - 10, lh=9,
-                 max_lines=2)
+    # ---- THE REST OF THE DAY (v12: ONE unified photo grid — stories
+    # 4-36, 6 cols x 6 rows; every story gets a clear photo tile: banner
+    # + kicker + 2-line headline. User order "visual biar lebih jelas":
+    # tiles are bigger (162x62, photo 35px) and text per tile is minimal,
+    # so the medium decks and the text-only ALSO ON list are gone — the
+    # space they took now funds tiles that actually read) ----
+    y = 393
+    d.text((MX, y), "MORE STORIES — 33 MORE, EACH WITH A PHOTO",
+           font=font(SANSB, 10), fill=INK)
+    rule(d, MX, RX, y + 15, INK, 1)
+    y = 413
+    GRID = [(num, kick, head, False)
+            for num, kick, head, _d, _s, _c, _i in MEDIUM] + \
+           [(num, place, head, True) for num, place, head, _s in SMALL]
+    card_w = (RX - MX - 5 * 4) / 6.0
+    card_h = 62
+    for idx, (num, kick, head, small) in enumerate(GRID):
+        row, col = divmod(idx, 6)
+        x = MX + col * (card_w + 4)
+        yy = y + row * (card_h + 4)
+        d.rectangle([x, yy, x + card_w, yy + card_h], fill=(255, 255, 255),
+                    outline=LINE, width=1)
+        # photo banner: full card width, 35px tall, on top
+        ph = _cover(num, int(card_w) - 2, 35, lead=False, small=small)
+        img.paste(ph, (int(x) + 1, yy + 1))
+        d.rectangle([x + 1, yy + 1, x + card_w - 1, yy + 36], outline=LINE, width=1)
+        # story number badge over the banner's top-left corner
+        fnum = font(SANSB, 7)
+        ntxt = str(num)
+        nw = int(d.textlength(ntxt, font=fnum)) + 6
+        d.rounded_rectangle([x + 2, yy + 2, x + 2 + nw, yy + 12], radius=2, fill=RED)
+        d.text((x + 5, yy + 3), ntxt, font=fnum, fill=(255, 255, 255))
+        # kicker + headline (2 lines); deck dropped in v12 for clarity
+        d.text((x + 5, yy + 38), kick, font=font(SANSB, 7), fill=RED)
+        para(d, x + 5, yy + 46, head, font(SANS, 8), INK, card_w - 10, lh=8,
+             max_lines=2)
+    assert y + 5 * (card_h + 4) + card_h <= 811, "grid overflow"
 
     # ---- STORIES BY REGION (single 14px row: label + bar + legend) ----
-    y = 640
+    y = 811
     d.text((MX, y + 3), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
     bx = MX + 118
     total = sum(n for _, n, _ in REGIONS)
@@ -706,68 +737,34 @@ def render():
         x += wseg
     d.text((bx + bar_w + 8, y + 3), legend, font=font(SANS, 8), fill=INK)
 
-    # ---- WHERE IT HAPPENED (v11: 112px strip — funds the taller medium
-    # cards; Europe still reads, pins unchanged) ----
-    y = 660
+    # ---- WHERE IT HAPPENED (v12: 84px strip — the photo grid takes the
+    # space now; pins shrunk to fit, continents still read) ----
+    y = 833
     d.text((MX, y), "WHERE IT HAPPENED  ·  PINS 1–13  (13 = IN ORBIT)",
            font=font(SANSB, 10), fill=INK)
-    draw_world_map(img, d, MX, y + 15, RX - MX, 112)
+    draw_world_map(img, d, MX, y + 15, RX - MX, 84, pin_r=6, pin_font=8)
 
-    # ---- ALSO ON ----
-    y = 793
-    d.text((MX, y), "ALSO ON SUNDAY 22 NOVEMBER — 23 MORE STORIES",
-           font=font(SANSB, 10), fill=INK)
-    rule(d, MX, RX, y + 15, INK, 1)
-    y = 813
-    col_w = (RX - MX - 12) / 2.0
-    row_h = 11
-    f_head = font(SANS, 9)
-    f_bold = font(SANSB, 9)
-    f_src = font(SANS, 7)
-    left = SMALL[:12]
-    right = SMALL[12:]
-    max_y = y
-    for ci, group in enumerate((left, right)):
-        x = MX + ci * (col_w + 12)
-        yy = y
-        for num, place, head, src in group:
-            d.text((x, yy), f"{num}.", font=f_bold, fill=RED)
-            prefix = f"{place} — "
-            d.text((x + 18, yy), prefix, font=f_bold, fill=INK)
-            px = x + 18 + tw(d, prefix, f_bold)
-            src_w = tw(d, src, f_src) + 4
-            avail = x + col_w - src_w - px
-            # single line, truncate with ellipsis if it ever runs long
-            txt = head
-            while tw(d, txt, f_head) > avail and len(txt) > 10:
-                txt = txt[:-4] + "…"
-            d.text((px, yy), txt, font=f_head, fill=INK)
-            d.text((x + col_w - src_w, yy), src, font=f_src, fill=GREY)
-            yy += row_h
-        max_y = max(max_y, yy)
-    assert max_y <= 950, f"ALSO ON overflow: ends at y={max_y}"
-
-    # ---- DATE CHECK + HOW SURE ----
-    y = 949
-    d.rectangle([MX, y, RX, y + 46], fill=(255, 255, 255), outline=RED, width=2)
-    d.text((MX + 6, y + 2), "DATE CHECK — LEFT OUT AS OLDER NEWS",
+    # ---- DATE CHECK + HOW SURE (v12: 40px — same content, tighter) ----
+    y = 938
+    d.rectangle([MX, y, RX, y + 40], fill=(255, 255, 255), outline=RED, width=2)
+    d.text((MX + 6, y + 1), "DATE CHECK — LEFT OUT AS OLDER NEWS",
            font=font(SANSB, 9), fill=RED)
-    para(d, MX + 6, y + 11,
+    para(d, MX + 6, y + 10,
          "Shenzhen summit (19–20 Nov) · ICJ Rohingya ruling (19 Nov) · GTA VI $3.79bn "
          "(19–20 Nov) · Anthropic IPO $93.5bn (20 Nov) · 'El Chapo Isidro' arrested "
          "(20–21 Nov) · Akvan landfall (20 Nov) · Banda Sea M6.8 (21 Nov)",
          font(SANS, 8), INK, RX - MX - 12, lh=10, max_lines=1)
-    d.text((MX + 6, y + 23),
+    d.text((MX + 6, y + 21),
            "NOT YET: ATP final (23 Nov) · BepiColombo separation (9–10 Dec)",
            font=font(SANSB, 8), fill=INK)
-    d.text((MX + 6, y + 34), "HOW SURE ARE WE?  ",
+    d.text((MX + 6, y + 31), "HOW SURE ARE WE?  ",
            font=font(SANSB, 8), fill=INK)
     xx = MX + 6 + tw(d, "HOW SURE ARE WE?  ", font(SANSB, 8))
-    d.text((xx, y + 34), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
+    d.text((xx, y + 31), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
            font=font(SANS, 8), fill=GREY)
 
     # ---- footer ----
-    y = 999
+    y = 984
     rule(d, MX, RX, y, INK, 1)
     d.text((MX, y + 4),
            "Every story here happened, or was first reported, on Sunday 22 November 2026.",
