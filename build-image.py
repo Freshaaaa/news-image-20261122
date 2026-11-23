@@ -117,16 +117,16 @@ LEADS = [
 # (num, kicker, headline, deck, source, confidence, icon)
 MEDIUM = [
     (4, "KYIV  ·  WAR", "Drones hit flats in Dymer",
-     "3–4 killed, 14 missing in the rubble. Overnight: 400+ drones, 110 missiles.",
+     "3–4 killed, 14 missing. Overnight: 400+ drones, 110 missiles.",
      "AP · Reuters", "CONFIRMED", "blast"),
     (5, "BALTIC SEA  ·  WAR", "Burning Sparta II towed away",
-     "Finland confirms Russia is towing the cargo ship away after a drone strike.",
+     "Finland: Russia tows the ship away after a drone strike.",
      "Reuters · BBC", "CONFIRMED", "ship"),
     (6, "LONDON  ·  MILITARY", "UK sends 1,000+ missiles",
-     "Britain sends 1,000+ air-defence missiles to Ukraine in a £240m package.",
+     "Britain sends 1,000+ missiles to Ukraine in a £240m package.",
      "Reuters", "OFFICIAL", "missile"),
     (7, "WALL STREET  ·  ECONOMY", "S&P 500 falls 3.7%",
-     "Dow enters a correction; Nasdaq erases its 2026 gains as AI stocks plunge.",
+     "Dow in correction; Nasdaq erases 2026 gains as AI stocks plunge.",
      "AP · Reuters", "CONFIRMED", "chart"),
     (8, "LAS VEGAS  ·  SPORT", "Verstappen wins in Vegas",
      "35 lead changes; wins by 0.639s over Norris. Piastri third.",
@@ -135,13 +135,13 @@ MEDIUM = [
      "INDECI: 1 killed, 16 hurt, 853 displaced, 93,000 without power.",
      "INDECI · USGS", "OFFICIAL", "quake"),
     (10, "BRAZIL  ·  DISASTER", "Supercell: 4 killed, 162 hurt",
-     "Disaster decree in Tupanciretã; 8,000+ homes damaged by the storm.",
+     "Disaster decree in Tupanciretã; 8,000+ homes damaged.",
      "Reuters · AP", "CONFIRMED", "storm"),
     (11, "CIKANDE, INDONESIA  ·  DISASTER", "Factory fire: 3 dead, 34 missing",
      "A candy factory burns in Banten; bodies found in 24 bags.",
      "AP · Reuters", "CONFIRMED", "fire"),
     (12, "DR CONGO  ·  HEALTH", "Ebola passes 11,021 cases",
-     "5,358 dead. WHO: fighting near Ituri hospital disrupts the response.",
+     "5,358 dead. WHO: fighting near Ituri hospital disrupts aid.",
      "WHO · CDC", "OFFICIAL", "virus"),
     (13, "MERCURY  ·  SPACE", "BepiColombo reaches Mercury",
      "Enters orbit after 8 years; ESA reports a thruster glitch.",
@@ -228,21 +228,21 @@ def icon(draw, kind, cx, cy, s, col=INK):
     if kind == "blast":
         # building + explosion star
         draw.rectangle([cx - s * 0.32, cy - s * 0.1, cx + s * 0.1, cy + s * 0.42], fill=col)
-        draw.rectangle([cx + s * 0.14, cy + s * 0.05, cx + s * 0.4, cy + s * 0.42], fill=GREY)
-        for dx, dy in [(-0.5, -0.55), (-0.1, -0.7), (0.35, -0.6), (0.55, -0.3),
+        draw.rectangle([cx + s * 0.14, cy + s * 0.05, cx + s * 0.4, cy + s * 0.42], fill=(70, 70, 70))
+        for dx, dy in [(-0.5, -0.45), (-0.1, -0.5), (0.35, -0.48), (0.55, -0.3),
                        (-0.55, -0.25), (0.1, -0.35)]:
-            draw.line([(cx, cy - s * 0.2), (cx + dx * s, cy + dy * s)], fill=RED, width=2)
+            draw.line([(cx, cy - s * 0.2), (cx + dx * s, cy + dy * s)], fill=RED, width=3)
         draw.ellipse([cx - s * 0.14, cy - s * 0.42, cx + s * 0.14, cy - s * 0.14],
                      fill=(240, 180, 40), outline=RED)
     elif kind == "ship":
         draw.polygon([(cx - s * 0.45, cy + s * 0.25), (cx + s * 0.45, cy + s * 0.25),
                       (cx + s * 0.3, cy + s * 0.42), (cx - s * 0.3, cy + s * 0.42)], fill=col)
-        draw.rectangle([cx - s * 0.2, cy - s * 0.05, cx + s * 0.2, cy + s * 0.25], fill=GREY)
-        draw.line([(cx, cy - s * 0.45), (cx, cy - s * 0.05)], fill=col, width=2)
+        draw.rectangle([cx - s * 0.2, cy - s * 0.05, cx + s * 0.2, cy + s * 0.25], fill=(60, 60, 60))
+        draw.line([(cx, cy - s * 0.45), (cx, cy - s * 0.05)], fill=col, width=3)
         draw.polygon([(cx, cy - s * 0.45), (cx + s * 0.3, cy - s * 0.32),
                       (cx, cy - s * 0.2)], fill=RED)
         draw.line([(cx - s * 0.45, cy + s * 0.5), (cx + s * 0.45, cy + s * 0.5)],
-                  fill=BLUE2, width=2)
+                  fill=BLUE2, width=3)
     elif kind == "missile":
         draw.polygon([(cx, cy - s * 0.5), (cx + s * 0.14, cy - s * 0.2),
                       (cx + s * 0.14, cy + s * 0.25), (cx - s * 0.14, cy + s * 0.25),
@@ -255,14 +255,14 @@ def icon(draw, kind, cx, cy, s, col=INK):
         pts = [(cx - s * 0.45, cy + s * 0.1), (cx - s * 0.2, cy - s * 0.15),
                (cx, cy + s * 0.05), (cx + s * 0.2, cy - s * 0.2),
                (cx + s * 0.45, cy + s * 0.35)]
-        draw.line(pts, fill=RED, width=3, joint="curve")
+        draw.line(pts, fill=RED, width=4, joint="curve")
         draw.polygon([(cx + s * 0.45, cy + s * 0.35), (cx + s * 0.45, cy + s * 0.2),
                       (cx + s * 0.3, cy + s * 0.35)], fill=RED)
         draw.line([(cx - s * 0.5, cy + s * 0.45), (cx + s * 0.5, cy + s * 0.45)],
-                  fill=GREY, width=1)
+                  fill=GREY, width=2)
     elif kind == "flag":
         draw.line([(cx - s * 0.3, cy - s * 0.45), (cx - s * 0.3, cy + s * 0.45)],
-                  fill=col, width=2)
+                  fill=col, width=3)
         for i, c in enumerate([INK, (255, 255, 255), INK, (255, 255, 255)]):
             draw.rectangle([cx - s * 0.3, cy - s * 0.45 + i * s * 0.18,
                             cx + s * 0.4, cy - s * 0.45 + (i + 1) * s * 0.18], fill=c)
@@ -272,9 +272,9 @@ def icon(draw, kind, cx, cy, s, col=INK):
         pts = [(cx - s * 0.5, cy), (cx - s * 0.3, cy - s * 0.3), (cx - s * 0.12, cy + s * 0.25),
                (cx + s * 0.05, cy - s * 0.35), (cx + s * 0.22, cy + s * 0.2),
                (cx + s * 0.4, cy - s * 0.1), (cx + s * 0.5, cy)]
-        draw.line(pts, fill=RED, width=2, joint="curve")
+        draw.line(pts, fill=RED, width=3, joint="curve")
         draw.line([(cx - s * 0.5, cy + s * 0.4), (cx + s * 0.5, cy + s * 0.4)],
-                  fill=GREY, width=1)
+                  fill=GREY, width=2)
     elif kind == "storm":
         draw.ellipse([cx - s * 0.4, cy - s * 0.3, cx + s * 0.1, cy + s * 0.1], fill=GREY)
         draw.ellipse([cx - s * 0.1, cy - s * 0.4, cx + s * 0.4, cy + s * 0.05], fill=INK)
@@ -295,7 +295,7 @@ def icon(draw, kind, cx, cy, s, col=INK):
             r = math.radians(a)
             x1, y1 = cx + 0.25 * s * math.cos(r), cy + 0.25 * s * math.sin(r)
             x2, y2 = cx + 0.42 * s * math.cos(r), cy + 0.42 * s * math.sin(r)
-            draw.line([(x1, y1), (x2, y2)], fill=RED, width=2)
+            draw.line([(x1, y1), (x2, y2)], fill=RED, width=3)
     elif kind == "planet":
         draw.ellipse([cx - s * 0.3, cy - s * 0.3, cx + s * 0.3, cy + s * 0.3],
                      fill=(200, 170, 120), outline=INK)
@@ -438,7 +438,8 @@ def draw_world_map(draw, x0, y0, w, h):
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=SEA, outline=INK, width=1)
     for poly in WORLD_POLYS:
         pts = [world_xy(lat, lon, x0, y0, w, h) for lon, lat in poly]
-        draw.polygon(pts, fill=LAND, outline=(150, 140, 115))
+        # darker land + darker coastline so continents pop off the sea
+        draw.polygon(pts, fill=(212, 196, 152), outline=(105, 95, 68))
     # graticule: every 60 deg lon, lat 60/30/-30; equator slightly stronger
     for lon in (-120, -60, 0, 60, 120):
         x = x0 + (lon + 180.0) / 360.0 * w
@@ -487,11 +488,14 @@ def draw_turkiye(draw, x0, y0, w, h):
             (0.42, 0.48), (0.34, 0.46), (0.26, 0.44), (0.18, 0.42),
             (0.10, 0.40), (0.06, 0.38), (0.08, 0.34), (0.04, 0.32)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
-    draw.polygon(pts, fill=LAND2, outline=INK)
+    # warmer, darker land so the map reads as a shape, not a pale silhouette
+    draw.polygon(pts, fill=(206, 176, 126), outline=INK)
     draw.text((x0 + 6, y0 + 1), "TÜRKIYE", font=font(SANSB, 9), fill=INK)
     draw.text((x0 + 100, y0 + 1), "BLACK SEA", font=font(SANS, 7), fill=BLUE2)
-    # OVERTIME clock, top right (in the Black Sea, clear of the land)
+    # OVERTIME clock, top right (in the Black Sea, clear of the land),
+    # with a warm glow halo so it pops
     cx, cy = x0 + w - 14, y0 + 13
+    draw.ellipse([cx - 11, cy - 11, cx + 11, cy + 11], fill=(250, 200, 110))
     draw.ellipse([cx - 7, cy - 7, cx + 7, cy + 7], fill=(255, 255, 255), outline=RED, width=2)
     draw.line([(cx, cy), (cx, cy - 4)], fill=RED, width=1)
     draw.line([(cx, cy), (cx + 3, cy + 1)], fill=RED, width=1)
@@ -503,8 +507,11 @@ def draw_turkiye(draw, x0, y0, w, h):
     kx, ky = x0 + 0.42 * w, y0 + 0.38 * h
     draw.ellipse([kx - 3, ky - 3, kx + 3, ky + 3], fill=INK, outline=(255, 255, 255), width=1)
     draw.text((kx + 5, ky - 4), "ANKARA", font=font(SANS, 6), fill=INK)
-    # Antalya pin on the south coast, at the bay dip
+    # Antalya pin on the south coast, at the bay dip — with a warm glow
+    # halo so it pops off the land
     ax, ay = x0 + 0.66 * w, y0 + 0.60 * h
+    draw.ellipse([ax - 11, ay - 11, ax + 11, ay + 11], fill=(250, 200, 110))
+    draw.ellipse([ax - 8, ay - 8, ax + 8, ay + 8], fill=(248, 170, 70))
     draw.ellipse([ax - 5, ay - 5, ax + 5, ay + 5], fill=RED, outline=(255, 255, 255), width=1)
     draw.text((ax + 8, ay - 4), "ANTALYA", font=font(SANSB, 8), fill=RED)
     draw.text((x0 + 6, y0 + 0.72 * h), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
@@ -538,14 +545,15 @@ def draw_libya(draw, x0, y0, w, h):
     bx, by = x0 + 0.70 * w, y0 + 0.42 * h
     draw.ellipse([bx - 5, by - 5, bx + 5, by + 5], fill=RED, outline=(255, 255, 255), width=1)
     draw.text((bx - 56, by - 4), "BENGHAZI", font=font(SANSB, 7), fill=RED)
-    # burning port facility on the coast, east of Benghazi
+    # burning port facility on the coast, east of Benghazi — BIG fire
     fx, fy = x0 + 0.82 * w, y0 + 0.47 * h
-    draw.ellipse([fx - 4, fy - 14, fx + 2, fy - 9], fill=(120, 115, 105))
-    draw.ellipse([fx + 1, fy - 12, fx + 6, fy - 8], fill=(140, 135, 125))
-    draw.ellipse([fx - 4, fy - 10, fx + 4, fy - 4], fill=(240, 180, 40), outline=RED)
-    for dx, dy in [(-4, -12), (0, -13), (4, -11)]:
-        draw.line([(fx, fy - 5), (fx + dx, fy + dy)], fill=RED, width=2)
-    draw.rectangle([fx - 8, fy - 4, fx + 8, fy + 2], fill=(60, 60, 60))
+    draw.ellipse([fx - 12, fy - 20, fx + 12, fy - 3], fill=(250, 195, 95))
+    draw.ellipse([fx - 5, fy - 22, fx + 2, fy - 16], fill=(120, 115, 105))
+    draw.ellipse([fx + 1, fy - 21, fx + 7, fy - 15], fill=(140, 135, 125))
+    draw.ellipse([fx - 9, fy - 17, fx + 9, fy - 4], fill=(240, 180, 40), outline=RED)
+    for dx, dy in [(-8, -20), (0, -22), (8, -19)]:
+        draw.line([(fx, fy - 5), (fx + dx, fy + dy)], fill=RED, width=3)
+    draw.rectangle([fx - 10, fy - 4, fx + 10, fy + 2], fill=(60, 60, 60))
     # second ship, small, in the distance (lower left of the sea)
     sx2, sy2 = x0 + 0.14 * w, y0 + 0.30 * h
     draw.polygon([(sx2 - 11, sy2), (sx2 + 11, sy2), (sx2 + 8, sy2 + 4),
@@ -555,22 +563,26 @@ def draw_libya(draw, x0, y0, w, h):
     draw.line([(sx2 - 13, sy2 + 6), (sx2 + 13, sy2 + 6)], fill=BLUE2, width=1)
     # BIG burning warship offshore, in the sea above the coast
     sx, sy = x0 + 0.42 * w, y0 + 0.34 * h
-    # smoke puffs above the fire
-    draw.ellipse([sx - 7, sy - 27, sx + 1, sy - 20], fill=(120, 115, 105))
-    draw.ellipse([sx + 1, sy - 26, sx + 9, sy - 19], fill=(140, 135, 125))
-    draw.ellipse([sx - 3, sy - 32, sx + 4, sy - 26], fill=(160, 155, 145))
-    # fire: orange core + red flame lines
-    draw.ellipse([sx - 7, sy - 21, sx + 7, sy - 10], fill=(240, 180, 40), outline=RED)
-    for dx, dy in [(-8, -24), (0, -26), (8, -23)]:
-        draw.line([(sx, sy - 12), (sx + dx, sy + dy)], fill=RED, width=2)
+    # smoke puffs above the fire — 4 layers, thicker and darker
+    draw.ellipse([sx - 10, sy - 30, sx + 0, sy - 22], fill=(100, 95, 85))
+    draw.ellipse([sx + 0, sy - 29, sx + 10, sy - 21], fill=(120, 115, 105))
+    draw.ellipse([sx - 5, sy - 32, sx + 4, sy - 25], fill=(140, 135, 125))
+    draw.ellipse([sx + 4, sy - 31, sx + 11, sy - 25], fill=(160, 155, 145))
+    # orange glow halo around the fire, then the fire itself (2x wider)
+    draw.ellipse([sx - 19, sy - 27, sx + 19, sy - 8], fill=(250, 195, 95))
+    draw.ellipse([sx - 16, sy - 25, sx + 16, sy - 9], fill=(248, 160, 55))
+    draw.ellipse([sx - 14, sy - 24, sx + 14, sy - 10], fill=(240, 180, 40), outline=RED)
+    draw.ellipse([sx - 7, sy - 19, sx + 7, sy - 10], fill=(255, 215, 90))
+    for dx, dy in [(-11, -28), (0, -31), (11, -27)]:
+        draw.line([(sx, sy - 12), (sx + dx, sy + dy)], fill=RED, width=3)
     # superstructure + funnel + mast
-    draw.rectangle([sx - 12, sy - 12, sx + 12, sy - 4], fill=GREY)
-    draw.rectangle([sx - 17, sy - 10, sx - 9, sy - 4], fill=(60, 60, 60))
-    draw.line([(sx + 7, sy - 12), (sx + 7, sy - 20)], fill=INK, width=2)
-    # hull: dark, wider than tall
-    draw.polygon([(sx - 24, sy - 4), (sx + 24, sy - 4), (sx + 17, sy + 8),
-                  (sx - 17, sy + 8)], fill=INK)
-    draw.line([(sx - 24, sy - 4), (sx + 24, sy - 4)], fill=(255, 255, 255), width=1)
+    draw.rectangle([sx - 14, sy - 12, sx + 14, sy - 4], fill=GREY)
+    draw.rectangle([sx - 19, sy - 10, sx - 11, sy - 4], fill=(60, 60, 60))
+    draw.line([(sx + 8, sy - 12), (sx + 8, sy - 20)], fill=INK, width=2)
+    # hull: dark, wider than tall (bigger than v2)
+    draw.polygon([(sx - 27, sy - 4), (sx + 27, sy - 4), (sx + 19, sy + 8),
+                  (sx - 19, sy + 8)], fill=INK)
+    draw.line([(sx - 27, sy - 4), (sx + 27, sy - 4)], fill=(255, 255, 255), width=1)
     # waves under the hull
     for wy in (sy + 10, sy + 13):
         draw.line([(sx - 28, wy), (sx - 14, wy - 2), (sx, wy), (sx + 14, wy - 2),
@@ -716,30 +728,31 @@ def render():
             d.rectangle([x, yy, x + card_w, yy + card_h], fill=(255, 255, 255),
                         outline=LINE, width=1)
             d.text((x + 5, yy + 3), f"{num}  {kick}", font=font(SANSB, 7), fill=RED)
-            icon(d, ic, x + 18, yy + 28, 26)
-            d.text((x + 38, yy + 24), "", font=font(SANS, 8), fill=INK)
-            para(d, x + 38, yy + 17, head, font(SANSB, 10), INK, card_w - 44, lh=11,
+            # BIG icon (40px, thick lines) on the left; headline + deck
+            # to its right so nothing overlaps
+            icon(d, ic, x + 21, yy + 34, 40)
+            para(d, x + 46, yy + 14, head, font(SANSB, 10), INK, card_w - 52, lh=11,
                  max_lines=2)
-            para(d, x + 5, yy + 42, deck, font(SANS, 8), INK, card_w - 10, lh=9,
+            para(d, x + 46, yy + 39, deck, font(SANS, 8), INK, card_w - 52, lh=9,
                  max_lines=2)
             sy = yy + card_h - 13
             d.text((x + 5, sy + 1), src, font=font(SANS, 7), fill=GREY)
             badge(d, x + card_w - 60, sy, conf)
 
-    # ---- STORIES BY REGION (single 12px row: label + bar + legend) ----
+    # ---- STORIES BY REGION (single 14px row: label + bar + legend) ----
     y = 552
-    d.text((MX, y + 2), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
+    d.text((MX, y + 3), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
     bx = MX + 118
     total = sum(n for _, n, _ in REGIONS)
     legend = "  ·  ".join(f"{name} {n}" for name, n, _ in REGIONS)
-    legend_w = int(tw(d, legend, font(SANS, 7)))
+    legend_w = int(tw(d, legend, font(SANS, 8)))
     bar_w = RX - bx - legend_w - 8
     x = bx
     for name, n, col in REGIONS:
         wseg = bar_w * n / total
-        d.rectangle([x, y + 2, x + wseg - 1, y + 12], fill=col)
+        d.rectangle([x, y + 2, x + wseg - 1, y + 16], fill=col)
         x += wseg
-    d.text((bx + bar_w + 8, y + 2), legend, font=font(SANS, 7), fill=INK)
+    d.text((bx + bar_w + 8, y + 3), legend, font=font(SANS, 8), fill=INK)
 
     # ---- WHERE IT HAPPENED (taller strip: 150px, Europe breathes) ----
     y = 570
