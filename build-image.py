@@ -5,9 +5,9 @@ One image, 1024x1024, PIL only, fully deterministic (no network, no clock,
 no unseeded randomness). Writes entry.png next to this script.
 Layout follows the proven winner template: masthead -> UTC strip -> numbers
 strip -> 3 big photo leads -> 33 photo cards in ONE unified 6x6 grid
-(v12: every story gets a clear visual tile) -> region bar -> world map
-"WHERE IT HAPPENED" -> DATE CHECK -> HOW SURE -> footer. 36 stories,
-6 regions.
+(v12: every story gets a clear visual tile) -> region bar -> realistic
+world map (v13: NASA Blue Marble raster) "WHERE IT HAPPENED" -> DATE
+CHECK -> HOW SURE -> footer. 36 stories, 6 regions.
 """
 import hashlib
 import math
@@ -410,18 +410,22 @@ PINS = {
 }
 # Visual nudge (dx, dy) for pins whose true positions collide, with a leader
 # line from the true spot to the drawn pin.
-PIN_OFFSETS = {1: (16, 12), 2: (-18, 12), 3: (-13, 11), 4: (13, -13),
-               5: (-15, -13), 7: (13, -11)}
+# v13: offsets retuned for the lat 75..-45 band (pins spread further
+# apart vertically now) — 3 vs 7 collide (8px apart) and 1 vs 4 (14px).
+PIN_OFFSETS = {3: (-14, 12), 4: (16, -10), 7: (14, -10)}
 
 
 # ---------------------------------------------------------------- icons
 
 
 # ---------------------------------------------------------------- maps
-# World map: continents as (lon, lat) coastlines, drawn with an
-# equirectangular projection cropped to lat 84..-60 so the strip reads
-# larger. Pins use the same projection, so they land on the land.
-LAT_TOP, LAT_BOT = 84.0, -60.0
+# World map: NASA Blue Marble Next Generation (public domain) raster,
+# cropped to lat 75..-45 and committed as photos/world-map.jpg (2x the
+# strip size). Pins use the same equirectangular projection, so they
+# land on the real continents. The coastline polygons below are kept
+# for reference but no longer drawn (v13: raster map replaces the
+# flat vector map).
+LAT_TOP, LAT_BOT = 75.0, -45.0
 
 
 def world_xy(lat, lon, x0, y0, w, h):
@@ -549,40 +553,19 @@ WORLD_POLYS = [
 ]
 
 
-def draw_world_map(img, draw, x0, y0, w, h, pin_r=8, pin_font=9):
-    draw.rectangle([x0, y0, x0 + w, y0 + h], fill=SEA, outline=INK, width=1)
-    # v7: richer sea — two watercolor washes over the whole map rect
-    # (drawn before the land so the continents cover them)
-    _watercolor(img, [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)],
-                (150, 185, 210), alpha=22, seed=99)
-    _watercolor(img, [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)],
-                (182, 206, 222), alpha=20, seed=98)
-    for pi, poly in enumerate(WORLD_POLYS):
-        pts = [world_xy(lat, lon, x0, y0, w, h) for lon, lat in poly]
-        # v7: wavier coastline — seeded jitter 3.5px on big continents,
-        # 2.0px on small islands (up from 2.5/1.5), watercolor wash, and
-        # a pen-stroke outline instead of the ruler line
-        xs = [p[0] for p in pts]
-        ys = [p[1] for p in pts]
-        big = max(max(xs) - min(xs), max(ys) - min(ys)) > 60
-        amp = 3.5 if big else 2.0
-        pts = _jitter_pts(pts, amp, 100 + pi)
-        # darker land + darker coastline so continents pop off the sea
-        draw.polygon(pts, fill=(212, 196, 152))
-        _watercolor(img, pts, (196, 178, 132), alpha=35, seed=300 + pi)
-        _hand_outline(draw, pts, (105, 95, 68), seed=400 + pi)
-        # v5: very subtle dot texture on the land (reads as paper grain,
-        # not noise) — drawn before graticule/pins so they stay crisp
-        _stipple(draw, pts, (192, 174, 128), step=9)
-    # graticule: every 60 deg lon, lat 60/30/-30; equator slightly stronger
-    for lon in (-120, -60, 0, 60, 120):
-        x = x0 + (lon + 180.0) / 360.0 * w
-        draw.line([(x, y0), (x, y0 + h)], fill=(190, 210, 226), width=1)
-    for lat in (60, 30, -30):
-        _, yy = world_xy(lat, 0, x0, y0, w, h)
-        draw.line([(x0, yy), (x0 + w, yy)], fill=(190, 210, 226), width=1)
-    _, eq = world_xy(0, 0, x0, y0, w, h)
-    draw.line([(x0, eq), (x0 + w, eq)], fill=(175, 198, 218), width=1)
+# v13: realistic satellite map — the NASA Blue Marble raster is pasted
+# (2x strip size, LANCZOS down) and the pins sit on top of it. Each pin
+# gets a dark halo so it reads on bright land (Sahara, ice) as well as
+# on the dark sea; the leader line + true-spot dot are white for the
+# same reason. The "13" label is white with a dark stroke because the
+# top-right of the raster is dark ocean now.
+_MAP_FILE = os.path.join(_PHOTO_DIR, "world-map.jpg")
+
+
+def draw_world_map(img, draw, x0, y0, w, h, pin_r=7, pin_font=8):
+    base = Image.open(_MAP_FILE).convert("RGB").resize((w, h), Image.LANCZOS)
+    img.paste(base, (x0, y0))
+    draw.rectangle([x0, y0, x0 + w, y0 + h], outline=INK, width=1)
     # pins 1-12
     f = font(SANSB, pin_font)
     for num, (lat, lon) in sorted(PINS.items()):
@@ -591,11 +574,14 @@ def draw_world_map(img, draw, x0, y0, w, h, pin_r=8, pin_font=9):
         px, py = world_xy(lat, lon, x0, y0, w, h)
         dx, dy = PIN_OFFSETS.get(num, (0, 0))
         if (dx, dy) != (0, 0):
-            draw.line([(px, py), (px + dx, py + dy)], fill=RED, width=1)
-            draw.ellipse([px - 2, py - 2, px + 2, py + 2], fill=RED)
+            draw.line([(px, py), (px + dx, py + dy)], fill=(255, 255, 255), width=1)
+            draw.ellipse([px - 2, py - 2, px + 2, py + 2], fill=(255, 255, 255))
             px, py = px + dx, py + dy
         r = pin_r
-        draw.ellipse([px - r, py - r, px + r, py + r], fill=RED, outline=(255, 255, 255), width=1)
+        draw.ellipse([px - r - 2, py - r - 2, px + r + 2, py + r + 2],
+                     fill=(20, 20, 20))
+        draw.ellipse([px - r, py - r, px + r, py + r], fill=RED,
+                     outline=(255, 255, 255), width=1)
         t = str(num)
         twd = draw.textlength(t, font=f)
         draw.text((px - twd / 2, py - 5), t, font=f, fill=(255, 255, 255))
@@ -604,7 +590,8 @@ def draw_world_map(img, draw, x0, y0, w, h, pin_r=8, pin_font=9):
     draw.polygon([(sx, sy - 9), (sx + 3, sy - 3), (sx + 9, sy - 3), (sx + 4, sy + 2),
                   (sx + 6, sy + 9), (sx, sy + 5), (sx - 6, sy + 9), (sx - 4, sy + 2),
                   (sx - 9, sy - 3), (sx - 3, sy - 3)], fill=GOLD, outline=INK)
-    draw.text((sx + 12, sy - 6), "13", font=f, fill=INK)
+    draw.text((sx + 12, sy - 6), "13", font=f, fill=(255, 255, 255),
+              stroke_width=1, stroke_fill=(20, 20, 20))
 
 
 
@@ -625,19 +612,19 @@ def render():
     y = 4
     t = "ONE DAY OF WORLD NEWS, ONE PICTURE"
     d.text(((W - tw(d, t, font(SANSB, 9))) / 2, y), t, font=font(SANSB, 9), fill=RED)
-    y = 15
+    y = 14
     t = "SUNDAY 22 NOVEMBER 2026"
-    d.text(((W - tw(d, t, font(SERIFB, 40))) / 2, y), t, font=font(SERIFB, 40), fill=INK)
-    y = 56
+    d.text(((W - tw(d, t, font(SERIFB, 38))) / 2, y), t, font=font(SERIFB, 38), fill=INK)
+    y = 53
     t = "36 STORIES  ·  6 REGIONS  ·  EVERY ONE DATED SUNDAY 22 NOVEMBER 2026"
     d.text(((W - tw(d, t, font(SANSB, 12))) / 2, y), t, font=font(SANSB, 12), fill=INK)
-    y = 72
+    y = 69
     rule(d, MX, RX, y, INK, 2)
     rule(d, MX, RX, y + 3, INK, 1)
 
-    # ---- THE DAY IN UTC (v12: 34px) ----
-    y = 81
-    d.rectangle([MX, y, RX, y + 34], fill=PAPER2, outline=INK, width=1)
+    # ---- THE DAY IN UTC (v13: 32px) ----
+    y = 78
+    d.rectangle([MX, y, RX, y + 32], fill=PAPER2, outline=INK, width=1)
     d.text((MX + 6, y + 2), "THE DAY IN UTC", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 7.0
     for i, (t, txt) in enumerate(UTC_STRIP):
@@ -645,9 +632,9 @@ def render():
         d.text((x, y + 11), t, font=font(SANSB, 11), fill=RED)
         para(d, x, y + 23, txt, font(SANS, 8), INK, col_w - 6, lh=9, max_lines=1)
 
-    # ---- THE DAY IN NUMBERS (v12: 42px) ----
-    y = 121
-    d.rectangle([MX, y, RX, y + 42], fill=(255, 255, 255), outline=INK, width=1)
+    # ---- THE DAY IN NUMBERS (v13: 40px) ----
+    y = 116
+    d.rectangle([MX, y, RX, y + 40], fill=(255, 255, 255), outline=INK, width=1)
     d.text((MX + 6, y + 3), "THE DAY IN NUMBERS", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 6.0
     for i, (num, txt) in enumerate(NUMBERS):
@@ -656,10 +643,10 @@ def render():
         para(d, x, y + 30, txt, font(SANS, 8), GREY, col_w - 6, lh=9, max_lines=2)
 
     # ---- 3 big leads (v10: PHOTO on top, then kicker + headline + deck
-    # below — like the reference front page; v12: 216px tall, photo 106px
-    # to fund the photo grid) ----
-    y = 171
-    lead_h = 216
+    # below — like the reference front page; v13: 198px tall, photo 92px
+    # to fund the taller realistic map) ----
+    y = 168
+    lead_h = 198
     col_w = (RX - MX - 12) / 3.0
     for i, (num, kick, head, deck, src, conf) in enumerate(LEADS):
         x = MX + i * (col_w + 6)
@@ -667,18 +654,18 @@ def render():
         # opaque paper fill covers the overlap, only the fringe shows)
         _rect_shadow(img, x, y, x + col_w, y + lead_h)
         d.rectangle([x, y, x + col_w, y + lead_h], fill=PAPER, outline=INK, width=1)
-        # photo: full column width, 106px tall, on top
-        ph = _cover(num, int(col_w) - 2, 106, lead=True)
+        # photo: full column width, 92px tall, on top
+        ph = _cover(num, int(col_w) - 2, 92, lead=True)
         img.paste(ph, (int(x) + 1, y + 1))
-        d.rectangle([x + 1, y + 1, x + col_w - 1, y + 107], outline=INK, width=1)
+        d.rectangle([x + 1, y + 1, x + col_w - 1, y + 93], outline=INK, width=1)
         # kicker (red) + confidence badge, below the photo
-        ky = y + 113
+        ky = y + 99
         d.text((x + 6, ky), f"#{num}  {kick}", font=font(SANSB, 9), fill=RED)
         badge(d, x + col_w - 62, ky - 1, conf)
         # headline (18pt so the longest one fits the column)
-        d.text((x + 6, y + 128), head, font=font(SERIFB, 18), fill=INK)
+        d.text((x + 6, y + 112), head, font=font(SERIFB, 18), fill=INK)
         # deck, 3 lines max
-        para(d, x + 6, y + 152, deck, font(SANS, 10), INK, col_w - 12, lh=12,
+        para(d, x + 6, y + 136, deck, font(SANS, 10), INK, col_w - 12, lh=12,
              max_lines=3)
         # source
         sy = y + lead_h - 16
@@ -690,11 +677,11 @@ def render():
     # tiles are bigger (162x62, photo 35px) and text per tile is minimal,
     # so the medium decks and the text-only ALSO ON list are gone — the
     # space they took now funds tiles that actually read) ----
-    y = 393
+    y = 372
     d.text((MX, y), "MORE STORIES — 33 MORE, EACH WITH A PHOTO",
            font=font(SANSB, 10), fill=INK)
-    rule(d, MX, RX, y + 15, INK, 1)
-    y = 413
+    rule(d, MX, RX, y + 13, INK, 1)
+    y = 389
     GRID = [(num, kick, head, False)
             for num, kick, head, _d, _s, _c, _i in MEDIUM] + \
            [(num, place, head, True) for num, place, head, _s in SMALL]
@@ -703,7 +690,7 @@ def render():
     for idx, (num, kick, head, small) in enumerate(GRID):
         row, col = divmod(idx, 6)
         x = MX + col * (card_w + 4)
-        yy = y + row * (card_h + 4)
+        yy = y + row * (card_h + 3)
         d.rectangle([x, yy, x + card_w, yy + card_h], fill=(255, 255, 255),
                     outline=LINE, width=1)
         # photo banner: full card width, 35px tall, on top
@@ -720,10 +707,10 @@ def render():
         d.text((x + 5, yy + 38), kick, font=font(SANSB, 7), fill=RED)
         para(d, x + 5, yy + 46, head, font(SANS, 8), INK, card_w - 10, lh=8,
              max_lines=2)
-    assert y + 5 * (card_h + 4) + card_h <= 811, "grid overflow"
+    assert y + 5 * (card_h + 3) + card_h <= 782, "grid overflow"
 
     # ---- STORIES BY REGION (single 14px row: label + bar + legend) ----
-    y = 811
+    y = 782
     d.text((MX, y + 3), "STORIES BY REGION", font=font(SANSB, 9), fill=RED)
     bx = MX + 118
     total = sum(n for _, n, _ in REGIONS)
@@ -737,15 +724,16 @@ def render():
         x += wseg
     d.text((bx + bar_w + 8, y + 3), legend, font=font(SANS, 8), fill=INK)
 
-    # ---- WHERE IT HAPPENED (v12: 84px strip — the photo grid takes the
-    # space now; pins shrunk to fit, continents still read) ----
-    y = 833
+    # ---- WHERE IT HAPPENED (v13: 120px — the map is a real satellite
+    # image now, NASA Blue Marble, so it gets its height back; pins sit
+    # on the real continents with a dark halo) ----
+    y = 804
     d.text((MX, y), "WHERE IT HAPPENED  ·  PINS 1–13  (13 = IN ORBIT)",
            font=font(SANSB, 10), fill=INK)
-    draw_world_map(img, d, MX, y + 15, RX - MX, 84, pin_r=6, pin_font=8)
+    draw_world_map(img, d, MX, y + 13, RX - MX, 120, pin_r=7, pin_font=8)
 
-    # ---- DATE CHECK + HOW SURE (v12: 40px — same content, tighter) ----
-    y = 938
+    # ---- DATE CHECK + HOW SURE (v13: 38px — same content, tighter) ----
+    y = 943
     d.rectangle([MX, y, RX, y + 40], fill=(255, 255, 255), outline=RED, width=2)
     d.text((MX + 6, y + 1), "DATE CHECK — LEFT OUT AS OLDER NEWS",
            font=font(SANSB, 9), fill=RED)
@@ -757,22 +745,22 @@ def render():
     d.text((MX + 6, y + 21),
            "NOT YET: ATP final (23 Nov) · BepiColombo separation (9–10 Dec)",
            font=font(SANSB, 8), fill=INK)
-    d.text((MX + 6, y + 31), "HOW SURE ARE WE?  ",
+    d.text((MX + 6, y + 30), "HOW SURE ARE WE?  ",
            font=font(SANSB, 8), fill=INK)
     xx = MX + 6 + tw(d, "HOW SURE ARE WE?  ", font(SANSB, 8))
-    d.text((xx, y + 31), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
+    d.text((xx, y + 30), "CONFIRMED = 2+ outlets · OFFICIAL = on the record · REPORTED = one outlet",
            font=font(SANS, 8), fill=GREY)
 
     # ---- footer ----
-    y = 984
+    y = 987
     rule(d, MX, RX, y, INK, 1)
     d.text((MX, y + 4),
            "Every story here happened, or was first reported, on Sunday 22 November 2026.",
            font=font(SANSB, 9), fill=INK)
     d.text((MX, y + 15),
            "Sources: AP, Reuters, AFP, BBC, USGS, ESA, IMD, UKMTO, NEMA, WHO. "
-           "All photographs are AI-generated; the world map is "
-           "original vector work.",
+           "All photographs are AI-generated; the world map is NASA Blue "
+           "Marble Next Generation (public domain).",
            font=font(SANS, 8), fill=GREY)
     # v6: very subtle paper grain over the whole page (last step, so it
     # touches everything equally and stays faint)
