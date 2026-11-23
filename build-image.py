@@ -12,7 +12,7 @@ import hashlib
 import os
 import sys
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 W, H = 1024, 1024
 PAPER = (245, 239, 224)      # cream paper
@@ -95,6 +95,102 @@ def badge(draw, x, y, level):
 
 def rule(draw, x0, x1, y, fill=INK, width=1):
     draw.line([(x0, y), (x1, y)], fill=fill, width=width)
+
+
+# ---------------------------------------------------------------- v5 finesse
+# Subtle shading / gradient / texture helpers. All deterministic (no
+# randomness, no clock): gradients are per-row lerps, stipple jitter is
+# arithmetic on grid coords, GaussianBlur is deterministic in Pillow.
+def _poly_gradient(img, pts, c0, c1, horizontal=False):
+    """Fill polygon `pts` (absolute image coords) with a subtle gradient
+    c0 -> c1 (top->bottom, or left->right if horizontal)."""
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    x0, y0 = int(min(xs)), int(min(ys))
+    x1, y1 = int(max(xs)), int(max(ys))
+    w, h = x1 - x0 + 1, y1 - y0 + 1
+    grad = Image.new("RGB", (w, h))
+    gd = ImageDraw.Draw(grad)
+    if horizontal:
+        for j in range(w):
+            t = j / max(1, w - 1)
+            c = tuple(int(round(c0[i] + (c1[i] - c0[i]) * t)) for i in range(3))
+            gd.line([(j, 0), (j, h - 1)], fill=c)
+    else:
+        for j in range(h):
+            t = j / max(1, h - 1)
+            c = tuple(int(round(c0[i] + (c1[i] - c0[i]) * t)) for i in range(3))
+            gd.line([(0, j), (w - 1, j)], fill=c)
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).polygon([(x - x0, y - y0) for x, y in pts], fill=255)
+    img.paste(grad, (x0, y0), mask)
+
+
+def _rect_gradient(img, x0, y0, w, h, top, bottom):
+    """Vertical gradient over a rectangle (top -> bottom)."""
+    x0, y0, w, h = int(x0), int(y0), int(w), int(h)
+    grad = Image.new("RGB", (w, h))
+    gd = ImageDraw.Draw(grad)
+    for j in range(h):
+        t = j / max(1, h - 1)
+        c = tuple(int(round(top[i] + (bottom[i] - top[i]) * t)) for i in range(3))
+        gd.line([(0, j), (w - 1, j)], fill=c)
+    img.paste(grad, (x0, y0))
+
+
+def _soft_shadow(img, pts, offset=(3, 5), blur=5, alpha=55):
+    """Soft drop shadow of a polygon: black shape offset down-right,
+    blurred, composited at low alpha. Draw BEFORE the shape itself so
+    the shape covers the shadow where they overlap."""
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ld = ImageDraw.Draw(layer)
+    ld.polygon([(x + offset[0], y + offset[1]) for x, y in pts],
+               fill=(0, 0, 0, alpha))
+    layer = layer.filter(ImageFilter.GaussianBlur(blur))
+    base = img.convert("RGBA")
+    out = Image.alpha_composite(base, layer)
+    img.paste(out.convert("RGB"), (0, 0))
+
+
+def _rect_shadow(img, x0, y0, x1, y1, offset=(3, 4), blur=4, alpha=50):
+    """Soft drop shadow of a rectangle (for the lead boxes)."""
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ld = ImageDraw.Draw(layer)
+    ld.rectangle([x0 + offset[0], y0 + offset[1], x1 + offset[0], y1 + offset[1]],
+                 fill=(0, 0, 0, alpha))
+    layer = layer.filter(ImageFilter.GaussianBlur(blur))
+    base = img.convert("RGBA")
+    out = Image.alpha_composite(base, layer)
+    img.paste(out.convert("RGB"), (0, 0))
+
+
+def _inside(px, py, pts):
+    """Point-in-polygon (ray casting), for stipple clipping."""
+    inside = False
+    n = len(pts)
+    j = n - 1
+    for i in range(n):
+        xi, yi = pts[i]
+        xj, yj = pts[j]
+        if (yi > py) != (yj > py):
+            if px < (xj - xi) * (py - yi) / (yj - yi) + xi:
+                inside = not inside
+        j = i
+    return inside
+
+
+def _stipple(draw, pts, dot, step=9):
+    """Very subtle 1px dot texture inside a polygon. Jitter is
+    arithmetic on grid coords (deterministic); dots are only a shade
+    darker than the land so they read as texture, not noise."""
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    for gy in range(int(min(ys)) + 4, int(max(ys)), step):
+        for gx in range(int(min(xs)) + 4, int(max(xs)), step):
+            jx = ((gx * 7 + gy * 13) % 5) - 2
+            jy = ((gx * 11 + gy * 3) % 5) - 2
+            if _inside(gx + jx, gy + jy, pts):
+                draw.point((gx + jx, gy + jy), fill=dot)
 
 
 # ---------------------------------------------------------------- data
@@ -334,22 +430,23 @@ GREENLAND = [
 SOUTH_AMERICA = [
     (-77, 7), (-75, 10), (-72, 12), (-68, 11), (-64, 10), (-61, 9),
     (-57, 6), (-53, 5), (-51, 4), (-50, 0), (-44, -3), (-38, -5),
-    (-35, -8), (-37, -11), (-39, -15), (-40, -20), (-42, -23), (-46, -25),
-    (-48, -27), (-52, -32), (-57, -35), (-58, -38), (-62, -41), (-65, -45),
-    (-67, -49), (-69, -52), (-68, -55), (-66, -55), (-68, -52), (-70, -48),
-    (-72, -42), (-73, -37), (-72, -30), (-70, -23), (-70, -18), (-75, -15),
-    (-77, -12), (-80, -6), (-81, -1), (-80, 3), (-77, 5),
+    (-35, -8), (-36, -7), (-37, -11), (-39, -15), (-40, -20), (-42, -23),
+    (-44, -24), (-46, -25), (-48, -27), (-52, -32), (-57, -35), (-58, -38),
+    (-62, -41), (-65, -45), (-67, -49), (-69, -52), (-68, -55), (-66, -55),
+    (-68, -52), (-70, -48), (-72, -42), (-73, -37), (-72, -30), (-71, -26),
+    (-70, -23), (-70, -18), (-75, -15), (-77, -12), (-80, -6), (-81, -1),
+    (-80, 3), (-77, 5),
 ]
 EUROPE = [
-    (18, 70), (25, 71), (30, 70), (28, 66), (24, 62), (21, 59), (19, 55),
+    (18, 70), (25, 71), (30, 70), (29, 68), (28, 66), (24, 62), (21, 59), (19, 55),
     (15, 54), (11, 57), (8, 57), (8, 54), (5, 53), (3, 51), (0, 50),
-    (-2, 49), (-2, 47), (-4, 43), (-9, 43), (-9, 38), (-8, 37), (-6, 36),
+    (-2, 49), (-2, 47), (-4, 43), (-9, 43), (-9, 41), (-9, 38), (-8, 37), (-6, 36),
     (-2, 36), (0, 39), (3, 42), (6, 43), (9, 44), (12, 42), (14, 40),
-    (16, 38), (18, 40), (16, 42), (14, 45), (16, 44), (18, 42), (19, 41),
-    (21, 40), (23, 39), (23, 37), (25, 38), (26, 40), (28, 41), (30, 42),
+    (16, 38), (17, 39), (18, 40), (16, 42), (14, 45), (16, 44), (18, 42), (19, 41),
+    (21, 40), (23, 39), (24, 38), (23, 37), (25, 38), (26, 40), (28, 41), (30, 42),
     (33, 44), (36, 45), (39, 46), (41, 46), (43, 45), (45, 44), (47, 45),
     (49, 46), (48, 48), (46, 51), (42, 54), (38, 57), (34, 59), (30, 61),
-    (27, 63), (24, 66), (21, 68),
+    (27, 63), (24, 66), (23, 67), (21, 68),
 ]
 BRITAIN = [
     (-5, 50), (-3, 53), (-5, 56), (-4, 58), (-2, 58), (0, 57), (0, 53),
@@ -379,8 +476,8 @@ ASIA = [
     (163, 59), (158, 55), (156, 51), (152, 48), (148, 45), (144, 42),
     (141, 40), (138, 37), (135, 34), (132, 33), (130, 32), (128, 35),
     (127, 37), (126, 38), (124, 40), (121, 38), (120, 35), (122, 31),
-    (121, 28), (119, 24), (117, 22), (113, 22), (109, 19), (106, 12),
-    (104, 9), (101, 6), (100, 2), (103, 1), (101, 5), (99, 9), (97, 13),
+    (121, 28), (119, 24), (117, 22), (113, 22), (109, 19), (107, 15), (106, 12),
+    (105, 10), (104, 9), (101, 6), (102, 4), (100, 2), (103, 1), (101, 5), (99, 9), (97, 13),
     (94, 16), (92, 21), (89, 22), (87, 21), (84, 19), (81, 16), (80, 13),
     (78, 9), (77, 8), (76, 10), (74, 14), (72, 19), (70, 22), (67, 24),
     (63, 25), (59, 25), (56, 26), (54, 27), (52, 28), (50, 29), (48, 30),
@@ -435,6 +532,9 @@ def draw_world_map(draw, x0, y0, w, h):
         pts = [world_xy(lat, lon, x0, y0, w, h) for lon, lat in poly]
         # darker land + darker coastline so continents pop off the sea
         draw.polygon(pts, fill=(212, 196, 152), outline=(105, 95, 68))
+        # v5: very subtle dot texture on the land (reads as paper grain,
+        # not noise) — drawn before graticule/pins so they stay crisp
+        _stipple(draw, pts, (192, 174, 128), step=9)
     # graticule: every 60 deg lon, lat 60/30/-30; equator slightly stronger
     for lon in (-120, -60, 0, 60, 120):
         x = x0 + (lon + 180.0) / 360.0 * w
@@ -475,16 +575,23 @@ def draw_turkiye(img, draw, x0, y0, w, h):
     "a conference that failed", not just a map. The draft-text box stays
     as a single line at the bottom. Everything stays inside (x0, y0, w, h)."""
     draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
-    poly = [(0.03, 0.36), (0.05, 0.26), (0.08, 0.19), (0.15, 0.16),
-            (0.25, 0.15), (0.35, 0.17), (0.45, 0.15), (0.55, 0.17),
-            (0.65, 0.15), (0.75, 0.17), (0.85, 0.19), (0.93, 0.23),
-            (0.96, 0.29), (0.95, 0.36), (0.90, 0.44), (0.82, 0.50),
-            (0.74, 0.54), (0.66, 0.58), (0.58, 0.54), (0.50, 0.50),
+    poly = [(0.03, 0.36), (0.04, 0.31), (0.05, 0.26), (0.08, 0.19), (0.15, 0.16),
+            (0.25, 0.15), (0.30, 0.19), (0.35, 0.17), (0.45, 0.15), (0.55, 0.17),
+            (0.60, 0.20), (0.65, 0.15), (0.75, 0.17), (0.85, 0.19), (0.89, 0.22),
+            (0.93, 0.23), (0.96, 0.29), (0.95, 0.36), (0.90, 0.44), (0.86, 0.47),
+            (0.82, 0.50), (0.74, 0.54), (0.66, 0.58), (0.58, 0.54), (0.50, 0.50),
             (0.42, 0.48), (0.34, 0.46), (0.26, 0.44), (0.18, 0.42),
             (0.10, 0.40), (0.06, 0.38), (0.08, 0.34), (0.04, 0.32)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
-    # warmer, darker land so the map reads as a shape, not a pale silhouette
-    draw.polygon(pts, fill=(206, 176, 126), outline=INK)
+    # v5: soft shadow under the map (drawn first, land covers the
+    # overlap, only the fringe shows on the sea) + subtle vertical
+    # gradient on the land (brighter at the top, a touch darker below)
+    # + very subtle dot texture — warmer, darker land so the map reads
+    # as a shape, not a pale silhouette
+    _soft_shadow(img, pts, offset=(3, 5), blur=5, alpha=55)
+    _poly_gradient(img, pts, (212, 184, 136), (198, 166, 112))
+    draw.polygon(pts, fill=None, outline=INK)
+    _stipple(draw, pts, (186, 156, 106), step=9)
     draw.text((x0 + 6, y0 + 1), "TÜRKIYE", font=font(SANSB, 9), fill=INK)
     draw.text((x0 + 100, y0 + 1), "BLACK SEA", font=font(SANS, 7), fill=BLUE2)
     # OVERTIME clock, top right (in the Black Sea, clear of the land),
@@ -533,7 +640,7 @@ def draw_turkiye(img, draw, x0, y0, w, h):
               font=font(SANSB, 8), fill=INK)
 
 
-def draw_libya(draw, x0, y0, w, h):
+def draw_libya(img, draw, x0, y0, w, h):
     """Libya / Mediterranean SCENE (130px box): the sea fills the top
     two-thirds, a BIG burning warship (120px hull) sits low in the sea
     with a two-tier orange fire and five smoke puffs billowing up and
@@ -541,15 +648,21 @@ def draw_libya(draw, x0, y0, w, h):
     a burning port facility on the coast near Benghazi, and a thick red
     SEA DRONE arrow. At 300px the first thing seen is the burning ship.
     Everything stays inside the box (x0, y0, w, h)."""
-    draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
+    # v5: subtle vertical gradient on the sea (lighter at the top,
+    # deeper below) instead of a flat fill
+    _rect_gradient(img, x0, y0, w, h, (230, 236, 241), (198, 212, 226))
+    draw.rectangle([x0, y0, x0 + w, y0 + h], outline=INK, width=1)
     # land: north coast lower than v3 (more sea room for the ship +
     # smoke), with the Sidra gulf dip; extends past the bottom
-    poly = [(0.02, 0.62), (0.10, 0.58), (0.20, 0.56), (0.30, 0.58),
-            (0.40, 0.64), (0.48, 0.68), (0.55, 0.64), (0.62, 0.59),
-            (0.70, 0.56), (0.78, 0.54), (0.86, 0.56), (0.94, 0.58),
+    poly = [(0.02, 0.62), (0.10, 0.58), (0.20, 0.56), (0.25, 0.60),
+            (0.30, 0.58), (0.40, 0.64), (0.44, 0.66), (0.48, 0.68),
+            (0.55, 0.64), (0.62, 0.59), (0.70, 0.56), (0.78, 0.54),
+            (0.86, 0.56), (0.90, 0.60), (0.94, 0.58),
             (0.98, 0.68), (0.98, 1.0), (0.0, 1.0), (0.0, 0.66)]
     pts = [(x0 + px * w, y0 + py * h) for px, py in poly]
     draw.polygon(pts, fill=LAND2, outline=INK)
+    # v5: very subtle dot texture on the land
+    _stipple(draw, pts, (194, 182, 148), step=9)
     draw.text((x0 + 6, y0 + 2), "SEA DRONE", font=font(SANSB, 7), fill=RED)
     draw.text((x0 + w - 100, y0 + 2), "MEDITERRANEAN SEA", font=font(SANS, 7), fill=BLUE2)
     draw.text((x0 + 8, y0 + 0.76 * h), "LIBYA", font=font(SANSB, 9), fill=INK)
@@ -578,12 +691,15 @@ def draw_libya(draw, x0, y0, w, h):
     draw.line([(sx2 - 15, sy2 + 7), (sx2 + 15, sy2 + 7)], fill=BLUE2, width=1)
     # BIG burning warship, low in the sea (waterline just above the coast)
     sx, sy = x0 + 0.40 * w, y0 + 0.52 * h
-    # smoke: 5 puffs billowing up and to the right (wind), above the fire
-    draw.ellipse([sx - 20, sy - 62, sx - 2, sy - 46], fill=(100, 95, 85))
-    draw.ellipse([sx - 6, sy - 64, sx + 12, sy - 48], fill=(120, 115, 105))
-    draw.ellipse([sx + 6, sy - 66, sx + 24, sy - 50], fill=(140, 135, 125))
-    draw.ellipse([sx + 16, sy - 64, sx + 34, sy - 50], fill=(160, 155, 145))
-    draw.ellipse([sx + 26, sy - 60, sx + 42, sy - 48], fill=(150, 145, 135))
+    # smoke: 5 puffs billowing up and to the right (wind), above the
+    # fire — v5: clean gradient, darkest at the base, lightest at the
+    # top, plus a pale highlight on the topmost puff
+    draw.ellipse([sx - 20, sy - 62, sx - 2, sy - 46], fill=(98, 93, 83))
+    draw.ellipse([sx - 6, sy - 64, sx + 12, sy - 48], fill=(118, 113, 103))
+    draw.ellipse([sx + 6, sy - 66, sx + 24, sy - 50], fill=(138, 133, 123))
+    draw.ellipse([sx + 16, sy - 64, sx + 34, sy - 50], fill=(158, 153, 143))
+    draw.ellipse([sx + 26, sy - 60, sx + 42, sy - 48], fill=(172, 167, 157))
+    draw.ellipse([sx + 28, sy - 58, sx + 38, sy - 52], fill=(205, 200, 190))
     # fire: two-tier orange glow + bright core + tall red flame tongues
     draw.ellipse([sx - 44, sy - 54, sx + 44, sy - 16], fill=(250, 195, 95))
     draw.ellipse([sx - 38, sy - 50, sx + 38, sy - 18], fill=(248, 160, 55))
@@ -591,14 +707,18 @@ def draw_libya(draw, x0, y0, w, h):
     draw.ellipse([sx - 15, sy - 40, sx + 15, sy - 22], fill=(255, 215, 90))
     for dx, dy in [(-26, -52), (0, -56), (26, -50)]:
         draw.line([(sx, sy - 24), (sx + dx, sy + dy)], fill=RED, width=4)
-    # superstructure + funnel + mast
+    # superstructure + funnel + mast — v5: light strip on top of the
+    # superstructure so the firelight reads as shading, not flat grey
     draw.rectangle([sx - 28, sy - 20, sx + 28, sy - 6], fill=GREY)
+    draw.rectangle([sx - 28, sy - 20, sx + 28, sy - 16], fill=(140, 140, 140))
     draw.rectangle([sx - 42, sy - 16, sx - 30, sy - 6], fill=(60, 60, 60))
     draw.line([(sx + 22, sy - 20), (sx + 22, sy - 36)], fill=INK, width=2)
-    # hull: dark, 120px wide
+    # hull: dark, 120px wide — v5: thin grey highlight just under the
+    # white waterline so the hull has a lit edge
     draw.polygon([(sx - 60, sy - 6), (sx + 60, sy - 6), (sx + 48, sy + 10),
                   (sx - 48, sy + 10)], fill=INK)
     draw.line([(sx - 60, sy - 6), (sx + 60, sy - 6)], fill=(255, 255, 255), width=1)
+    draw.line([(sx - 56, sy - 3), (sx + 56, sy - 3)], fill=(110, 110, 110), width=2)
     # waves under the hull (in the sea, just above the coast)
     for wy in (sy + 12, sy + 14):
         draw.line([(sx - 62, wy), (sx - 30, wy - 2), (sx, wy), (sx + 30, wy - 2),
@@ -608,13 +728,15 @@ def draw_libya(draw, x0, y0, w, h):
     draw.polygon([(sx - 62, sy - 8), (sx - 74, sy - 14), (sx - 70, sy)], fill=RED)
 
 
-def draw_house_chart(draw, x0, y0, w, h):
+def draw_house_chart(img, draw, x0, y0, w, h):
     """US House seats (130px box): 258 Dem (blue) vs 177 Rep (red),
     stacked bar + a BIG detailed Capitol (ribbed dome, lantern, columned
     base) and a small US flag — plus victory confetti dots and two gold
     stars scattered in the empty space, so the scene reads as a win.
     Everything stays inside the box (x0, y0, w, h)."""
-    draw.rectangle([x0, y0, x0 + w, y0 + h], fill=(226, 232, 238), outline=INK, width=1)
+    # v5: subtle sky gradient (pale blue at the top fading to near-white)
+    _rect_gradient(img, x0, y0, w, h, (214, 225, 238), (236, 239, 243))
+    draw.rectangle([x0, y0, x0 + w, y0 + h], outline=INK, width=1)
     draw.text((x0 + 6, y0 + 3), "US HOUSE  ·  435 SEATS", font=font(SANSB, 9), fill=INK)
     # small US flag, top left under the title
     fx, fy = x0 + 12, y0 + 20
@@ -629,11 +751,14 @@ def draw_house_chart(draw, x0, y0, w, h):
     # the bar sits at y0+84, so the base (ends y0+76) just clears it.
     cx = x0 + w - 46
     base_top = y0 + 66
-    # dome: smooth half-ellipse polygon (offsets from cx, base_top)
+    # dome: smooth half-ellipse polygon (offsets from cx, base_top) —
+    # v5: subtle left-to-right gradient (bright white on the lit side,
+    # faintly shaded on the right) instead of a flat fill
     dome = [(-30, -10), (-29, -18), (-24, -25), (-16, -30), (-9, -32),
             (0, -32), (9, -32), (16, -30), (24, -25), (29, -18), (30, -10)]
-    draw.polygon([(cx + dx, base_top + dy) for dx, dy in dome],
-                 fill=(255, 255, 255), outline=INK)
+    dome_pts = [(cx + dx, base_top + dy) for dx, dy in dome]
+    _poly_gradient(img, dome_pts, (255, 255, 255), (224, 229, 237), horizontal=True)
+    draw.polygon(dome_pts, fill=None, outline=INK)
     # ribs on the dome
     for dx, top in [(-20, -28), (-10, -31), (0, -32), (10, -31), (20, -28)]:
         draw.line([(cx + dx, base_top + top), (cx + dx, base_top - 11)],
@@ -645,6 +770,11 @@ def draw_house_chart(draw, x0, y0, w, h):
     # drum
     draw.rectangle([cx - 22, base_top - 10, cx + 22, base_top],
                    fill=(255, 255, 255), outline=INK)
+    # v5: soft shadow under the base (drawn first so the opaque base
+    # covers the overlap — only the fringe below shows)
+    _soft_shadow(img, [(cx - 42, base_top), (cx + 42, base_top),
+                       (cx + 42, base_top + 10), (cx - 42, base_top + 10)],
+                 offset=(2, 3), blur=3, alpha=45)
     # base with columns
     draw.rectangle([cx - 42, base_top, cx + 42, base_top + 10],
                    fill=(255, 255, 255), outline=INK)
@@ -732,7 +862,10 @@ def render():
     col_w = (RX - MX - 12) / 3.0
     for i, (num, kick, head, deck, src, conf) in enumerate(LEADS):
         x = MX + i * (col_w + 6)
-        d.rectangle([x, y, x + col_w, y + lead_h], outline=INK, width=1)
+        # v5: soft drop shadow under the lead box (drawn first; the
+        # opaque paper fill covers the overlap, only the fringe shows)
+        _rect_shadow(img, x, y, x + col_w, y + lead_h)
+        d.rectangle([x, y, x + col_w, y + lead_h], fill=PAPER, outline=INK, width=1)
         d.rectangle([x, y, x + col_w, y + 20], fill=REDBG)
         d.text((x + 6, y + 4), f"#{num}  {kick}", font=font(SANSB, 9), fill=(255, 255, 255))
         d.text((x + 6, y + 24), head, font=font(SERIFB, 19), fill=INK)
@@ -744,9 +877,9 @@ def render():
         if num == 1:
             draw_turkiye(img, d, x + 6, iy, col_w - 12, ih)
         elif num == 2:
-            draw_libya(d, x + 6, iy, col_w - 12, ih)
+            draw_libya(img, d, x + 6, iy, col_w - 12, ih)
         else:
-            draw_house_chart(d, x + 6, iy, col_w - 12, ih)
+            draw_house_chart(img, d, x + 6, iy, col_w - 12, ih)
         # source + badge
         sy = y + lead_h - 16
         d.text((x + 6, sy + 2), src, font=font(SANS, 8), fill=GREY)
