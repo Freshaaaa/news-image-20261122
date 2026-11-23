@@ -10,6 +10,10 @@ world map (v13: NASA Blue Marble raster) "WHERE IT HAPPENED" -> DATE
 CHECK -> HOW SURE -> footer. 36 stories, 6 regions.
 v14 "visual diperjelas lagi": grid tiles 162x70, banners 40px, headlines
 9pt, all photos sharpened + more saturated, map pins bigger (r 8).
+v15: top strips fixed — UTC 40px + NUMBERS 44px (v14's 30/34px boxes
+clipped the captions into the times/numbers); funded by grid tiles
+162x67, banners 38px; leads/grid shift +20px down, everything else
+keeps v14 (map 120px, lead photos 92px, DATE CHECK, footer).
 """
 import hashlib
 import math
@@ -633,31 +637,37 @@ def render():
     rule(d, MX, RX, y, INK, 2)
     rule(d, MX, RX, y + 3, INK, 1)
 
-    # ---- THE DAY IN UTC (v14: 30px) ----
+    # ---- THE DAY IN UTC (v15: 40px — v14's 30px box clipped the
+    # captions into the times; measured ink: header 75-82, time 87-95,
+    # caption 98-107, box bottom 110 = 3px padding) ----
     y = 70
-    d.rectangle([MX, y, RX, y + 30], fill=PAPER2, outline=INK, width=1)
-    d.text((MX + 6, y + 1), "THE DAY IN UTC", font=font(SANSB, 9), fill=RED)
+    d.rectangle([MX, y, RX, y + 40], fill=PAPER2, outline=INK, width=1)
+    d.text((MX + 6, y + 3), "THE DAY IN UTC", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 7.0
     for i, (t, txt) in enumerate(UTC_STRIP):
         x = MX + 6 + i * col_w
-        d.text((x, y + 10), t, font=font(SANSB, 11), fill=RED)
-        para(d, x, y + 19, txt, font(SANS, 8), INK, col_w - 6, lh=9, max_lines=1)
+        d.text((x, y + 14), t, font=font(SANSB, 11), fill=RED)
+        para(d, x, y + 27, txt, font(SANS, 8), INK, col_w - 6, lh=9, max_lines=1)
 
-    # ---- THE DAY IN NUMBERS (v14: 34px) ----
-    y = 104
-    d.rectangle([MX, y, RX, y + 34], fill=(255, 255, 255), outline=INK, width=1)
-    d.text((MX + 6, y + 2), "THE DAY IN NUMBERS", font=font(SANSB, 9), fill=RED)
+    # ---- THE DAY IN NUMBERS (v15: 44px — v14's 34px box overlapped the
+    # captions into the numbers and pushed line 2 below the border;
+    # measured ink: header 119-126, number 131-143, caption 146-155,
+    # box bottom 158 = 3px padding) ----
+    y = 114
+    d.rectangle([MX, y, RX, y + 44], fill=(255, 255, 255), outline=INK, width=1)
+    d.text((MX + 6, y + 3), "THE DAY IN NUMBERS", font=font(SANSB, 9), fill=RED)
     col_w = (RX - MX - 12) / 6.0
     for i, (num, txt) in enumerate(NUMBERS):
         x = MX + 6 + i * col_w
-        d.text((x, y + 12), num, font=font(SERIFB, 16), fill=INK)
-        para(d, x, y + 24, txt, font(SANS, 8), GREY, col_w - 6, lh=9, max_lines=2)
+        d.text((x, y + 13), num, font=font(SERIFB, 16), fill=INK)
+        para(d, x, y + 31, txt, font(SANS, 8), GREY, col_w - 6, lh=9, max_lines=2)
 
     # ---- 3 big leads (v10: PHOTO on top, then kicker + headline + deck
     # below — like the reference front page; v14: 192px tall, photo still
     # 92px, deck line-height 11 to fund the taller grid banners; photos
-    # get the v14 sharpen/saturation lift via _cover) ----
-    y = 148
+    # get the v14 sharpen/saturation lift via _cover; v15: y 148->168 to
+    # make room for the fixed top strips) ----
+    y = 168
     lead_h = 192
     col_w = (RX - MX - 12) / 3.0
     for i, (num, kick, head, deck, src, conf) in enumerate(LEADS):
@@ -689,27 +699,30 @@ def render():
     # 162x70 (was 162x62), banner 40px (was 35), headline 9pt (was 8),
     # number badge 8pt, photos sharpened + more saturated via _cover.
     # Funded by small trims everywhere else (masthead, strips, leads,
-    # gaps, DATE CHECK) — map stays 120px, lead photos stay 92px) ----
-    y = 346
+    # gaps, DATE CHECK) — map stays 120px, lead photos stay 92px.
+    # v15: tiles 162x67, banner 38px (was 40) to fund the fixed top
+    # strips (UTC 40px + NUMBERS 44px); kicker/headline shift up 2px,
+    # headline descenders keep 1px clearance like v14) ----
+    y = 366
     d.text((MX, y), "MORE STORIES — 33 MORE, EACH WITH A PHOTO",
            font=font(SANSB, 10), fill=INK)
     rule(d, MX, RX, y + 13, INK, 1)
-    y = 364
+    y = 384
     GRID = [(num, kick, head, False)
             for num, kick, head, _d, _s, _c, _i in MEDIUM] + \
            [(num, place, head, True) for num, place, head, _s in SMALL]
     card_w = (RX - MX - 5 * 4) / 6.0
-    card_h = 70
+    card_h = 67
     for idx, (num, kick, head, small) in enumerate(GRID):
         row, col = divmod(idx, 6)
         x = MX + col * (card_w + 4)
         yy = y + row * (card_h + 2)
         d.rectangle([x, yy, x + card_w, yy + card_h], fill=(255, 255, 255),
                     outline=LINE, width=1)
-        # photo banner: full card width, 40px tall, on top
-        ph = _cover(num, int(card_w) - 2, 40, lead=False, small=small)
+        # photo banner: full card width, 38px tall, on top
+        ph = _cover(num, int(card_w) - 2, 38, lead=False, small=small)
         img.paste(ph, (int(x) + 1, yy + 1))
-        d.rectangle([x + 1, yy + 1, x + card_w - 1, yy + 41], outline=LINE, width=1)
+        d.rectangle([x + 1, yy + 1, x + card_w - 1, yy + 39], outline=LINE, width=1)
         # story number badge over the banner's top-left corner
         fnum = font(SANSB, 8)
         ntxt = str(num)
@@ -717,8 +730,8 @@ def render():
         d.rounded_rectangle([x + 2, yy + 2, x + 2 + nw, yy + 13], radius=2, fill=RED)
         d.text((x + 5, yy + 3), ntxt, font=fnum, fill=(255, 255, 255))
         # kicker + headline (2 lines); deck dropped in v12 for clarity
-        d.text((x + 5, yy + 42), kick, font=font(SANSB, 7), fill=RED)
-        para(d, x + 5, yy + 50, head, font(SANS, 9), INK, card_w - 10, lh=9,
+        d.text((x + 5, yy + 40), kick, font=font(SANSB, 7), fill=RED)
+        para(d, x + 5, yy + 47, head, font(SANS, 9), INK, card_w - 10, lh=9,
              max_lines=2)
     assert y + 5 * (card_h + 2) + card_h <= 800, "grid overflow"
 
